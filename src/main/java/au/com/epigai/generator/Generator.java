@@ -7,13 +7,15 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 
 public class Generator {
-public static void generate(Class interfaceToImplement, Method methodToImplement, SpecUnitTest... unitTestInstances) {	
+	
+	public static void generate(Class interfaceToImplement, Method methodToImplement, SpecUnitTest... unitTestInstances) {	
 		
 		System.out.println("EpiGAI Generating code");
 		
@@ -37,58 +39,108 @@ public static void generate(Class interfaceToImplement, Method methodToImplement
 			
 			boolean solutionFound = false;
 			// need to come up with a few random implementations of it
-			List<AbstractIntFunction> intFunctions = ImplEvolver.evolveFrom(null);
+			List<AbstractIntFunction> intFunctionsA = ImplEvolver.evolveFrom(null);
+			List<AbstractIntFunction> intFunctionsB = ImplEvolver.evolveFrom(null);
+			List<AbstractIntFunction> intFunctionsC = ImplEvolver.evolveFrom(null);
+			
+			List<List<AbstractIntFunction>> impls = new ArrayList<List<AbstractIntFunction>>();
+			
+			impls.add(intFunctionsA);
+			impls.add(intFunctionsB);
+			impls.add(intFunctionsC);
 			
 			// as well as functions - needs to know
 			// what variables it has
 			// every function call result must be assigned to a variable
 		
+			ResultsAndFunctionsWrapper currentBest = null;
+			
 			while (!solutionFound) {
 				
-				MethodProxy methodProxy = new MethodProxy(interfaceToImplement, methodToImplement, intFunctions);
-		
-				Object proxy = Proxy.newProxyInstance(interfaceToImplement.getClassLoader(), new Class[] {interfaceToImplement}, methodProxy);
+				Optional<ResultsAndFunctionsWrapper> rafwOpt = impls.stream()
+					.map(intFunctions -> {
+						ResultsAndFunctionsWrapper resultsAndFunctions = testOneImpl(intFunctions, interfaceToImplement, methodToImplement, unitTestInstances);
+						return resultsAndFunctions;
+					}).max((rafw1, rafw2) -> {
+						// positive means first greater than second
+						if (rafw1.getTestResults().getPassed() >= rafw2.getTestResults().getPassed()) {
+							return 1;
+						} else {
+							return -1;
+						}
+					});
 				
-				// run the tests against the implementations
 				
-				List<Class> classes = new ArrayList<Class>();
-				Arrays.stream(unitTestInstances)
-						.forEach(unitTestInstance -> {
-							if (unitTestInstance instanceof SpecUnitTest) {
-								SpecUnitTest sut = (SpecUnitTest)unitTestInstance;
-								sut.setInstanceToTest(proxy);
-								classes.add(sut.getClass());
-							}
-						});
+//				MethodProxy methodProxy = new MethodProxy(interfaceToImplement, methodToImplement, intFunctions);
+//		
+//				Object proxy = Proxy.newProxyInstance(interfaceToImplement.getClassLoader(), new Class[] {interfaceToImplement}, methodProxy);
+//				
+//				// run the tests against the implementations
+//				
+//				List<Class> classes = new ArrayList<Class>();
+//				Arrays.stream(unitTestInstances)
+//						.forEach(unitTestInstance -> {
+//							if (unitTestInstance instanceof SpecUnitTest) {
+//								SpecUnitTest sut = (SpecUnitTest)unitTestInstance;
+//								sut.setInstanceToTest(proxy);
+//								classes.add(sut.getClass());
+//							}
+//						});
+//				
+//				// select the best one
+//				
+//				// evolve new implementations from that one
+//			
+//				TestResults testResults = classes.stream()
+//						.map(testClass -> {
+//							JUnitCore junitCore = new JUnitCore();
+//							Result result = junitCore.run(testClass);
+//							int ran = result.getRunCount();
+//							int failed = result.getFailureCount();
+//							System.out.println("Ran " + ran + " and " + failed + " failed");
+//							TestResults tr1 = new TestResults();
+//							tr1.setRan(ran);
+//							tr1.setFailed(failed);
+//							tr1.setPassed(ran - failed);
+//							return tr1;
+//						}).reduce(new TestResults(), (tr2, tr3) -> tr2.addAll(tr3));
+//				
+//				System.out.println("ran " + testResults.getRan() + " tests - passed: " + testResults.getPassed() + " failed: " + testResults.getFailed());
 				
-				// select the best one
-				
-				// evolve new implementations from that one
-			
-				TestResults testResults = classes.stream()
-						.map(testClass -> {
-							JUnitCore junitCore = new JUnitCore();
-							Result result = junitCore.run(testClass);
-							int ran = result.getRunCount();
-							int failed = result.getFailureCount();
-							System.out.println("Ran " + ran + " and " + failed + " failed");
-							TestResults tr1 = new TestResults();
-							tr1.setRan(ran);
-							tr1.setFailed(failed);
-							tr1.setPassed(ran - failed);
-							return tr1;
-						}).reduce(new TestResults(), (tr2, tr3) -> tr2.addAll(tr3));
-				
-				System.out.println("ran " + testResults.getRan() + " tests - passed: " + testResults.getPassed() + " failed: " + testResults.getFailed());
-				
-				if (testResults.getFailed() > 0) {
-					// TODO - select the best so far then pass that into the evolver to evolve from
-					intFunctions = ImplEvolver.evolveFrom(null);
+				if (rafwOpt.isPresent()) {
+					
+					TestResults testResults = rafwOpt.get().getTestResults();
+					
+					if (testResults.getFailed() > 0) {
+						System.out.println("##### New results ##### passed " + testResults.getPassed() + " failed " + testResults.getFailed());
+						rafwOpt.get().getIntFunctions().stream().forEachOrdered(intFunction -> intFunction.printCode());
+						if (currentBest != null) {
+							System.out.println("##### Current best solution ##### passed " + currentBest.getTestResults().getPassed() + " failed " + currentBest.getTestResults().getFailed());
+							currentBest.getIntFunctions().stream().forEachOrdered(intFunction -> intFunction.printCode());
+						} else {
+							System.out.println("##### No current solution #####");
+						}
+						// compare with the previous best
+						if (currentBest != null && currentBest.getTestResults().getPassed() > testResults.getPassed()) {
+							// evolve from the previous impl (current best)
+							System.out.println("##### Sticking with the previous solution #####");
+							evolve(impls, currentBest);
+						} else {
+							// found a new better solution
+							// evolve from the new impl
+							System.out.println("####### New results are the new best solution #########");
+							currentBest = rafwOpt.get();
+							//rafwOpt.get().getIntFunctions().stream().forEachOrdered(intFunction -> intFunction.printCode());
+							evolve(impls, rafwOpt.get());
+						}
+					} else {
+						solutionFound = true;
+						System.out.println("####### Found a solution #########");
+						rafwOpt.get().getIntFunctions().stream().forEachOrdered(intFunction -> intFunction.printCode());
+						// TODO - the returns statement
+					}
 				} else {
-					solutionFound = true;
-					System.out.println("####### Found a solution #########");
-					intFunctions.stream().forEachOrdered(intFunction -> intFunction.printCode());
-					// TODO - the returns statement
+					throw new RuntimeException("no test results - unexpected");
 				}
 			}
 		} else {
@@ -96,4 +148,66 @@ public static void generate(Class interfaceToImplement, Method methodToImplement
 		}
 		
 	}
+	
+	private static ResultsAndFunctionsWrapper testOneImpl(List<AbstractIntFunction> intFunctions, 
+													Class interfaceToImplement, 
+													Method methodToImplement, 
+													SpecUnitTest... unitTestInstances) {
+		
+		MethodProxy methodProxy = new MethodProxy(interfaceToImplement, methodToImplement, intFunctions);
+		
+		Object proxy = Proxy.newProxyInstance(interfaceToImplement.getClassLoader(), new Class[] {interfaceToImplement}, methodProxy);
+		
+		// run the tests against the implementations
+		
+		List<Class> classes = new ArrayList<Class>();
+		Arrays.stream(unitTestInstances)
+				.forEach(unitTestInstance -> {
+					if (unitTestInstance instanceof SpecUnitTest) {
+						SpecUnitTest sut = (SpecUnitTest)unitTestInstance;
+						sut.setInstanceToTest(proxy);
+						classes.add(sut.getClass());
+					}
+				});
+		
+		// select the best one
+		
+		// evolve new implementations from that one
+	
+		TestResults testResults = classes.stream()
+				.map(testClass -> {
+					JUnitCore junitCore = new JUnitCore();
+					Result result = junitCore.run(testClass);
+					int ran = result.getRunCount();
+					int failed = result.getFailureCount();
+					System.out.println("Ran " + ran + " and " + failed + " failed");
+					TestResults tr1 = new TestResults();
+					tr1.setRan(ran);
+					tr1.setFailed(failed);
+					tr1.setPassed(ran - failed);
+					return tr1;
+				}).reduce(new TestResults(), (tr2, tr3) -> tr2.addAll(tr3));
+		
+		System.out.println("ran " + testResults.getRan() + " tests - passed: " + testResults.getPassed() + " failed: " + testResults.getFailed());
+		
+		ResultsAndFunctionsWrapper resultsAndFunctions = new ResultsAndFunctionsWrapper();
+		resultsAndFunctions.setIntFunctions(intFunctions);
+		resultsAndFunctions.setTestResults(testResults);
+		return resultsAndFunctions;
+	}
+	
+	private static List<List<AbstractIntFunction>> evolve(List<List<AbstractIntFunction>> impls, ResultsAndFunctionsWrapper evolveFrom) {
+		
+		impls.clear();
+		List<AbstractIntFunction> intFunctionsA = ImplEvolver.evolveFrom(null);
+		List<AbstractIntFunction> intFunctionsB = ImplEvolver.evolveFrom(null);
+		List<AbstractIntFunction> intFunctionsC = ImplEvolver.evolveFrom(null);
+		
+		impls.add(intFunctionsA);
+		impls.add(intFunctionsB);
+		impls.add(intFunctionsC);
+		
+		return impls;
+	}
+	
 }

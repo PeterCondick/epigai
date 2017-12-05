@@ -122,7 +122,7 @@ public class MethodProxy implements InvocationHandler {
 		}
 		
 		// need a Map of key type and value list of variable names
-		System.out.println("constructor finished");
+		//System.out.println("constructor finished");
 	}
 	
 	private String generateVarName() {
@@ -150,7 +150,7 @@ public class MethodProxy implements InvocationHandler {
 		// from method we can't get the original names of the parameters/args - just made up ones
 		// Grrr
 		if (method.equals(methodToImplement)) {
-			System.out.println("in the MethodProxy invocationHandler - methods are equal");
+			//System.out.println("in the MethodProxy invocationHandler - methods are equal");
 			
 			// populate variableValues with the passed in args
 			Parameter[] params = method.getParameters();
