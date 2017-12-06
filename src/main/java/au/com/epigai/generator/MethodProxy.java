@@ -170,7 +170,7 @@ public class MethodProxy implements InvocationHandler {
 				int retVal = intFunction.function((Integer)variableValues.get(paramNames[0]), (Integer)variableValues.get(paramNames[1]));
 				// store the returned value in variableValues with the returned name
 				variableValues.put(intFunction.getReturnsName(), retVal);
-				System.out.println("variable " + intFunction.getReturnsName() + " set to " + retVal);
+				//System.out.println("variable " + intFunction.getReturnsName() + " set to " + retVal);
 				lastReturnedVal = retVal;
 			}
 			

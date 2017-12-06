@@ -57,6 +57,8 @@ public class Generator {
 			
 			while (!solutionFound) {
 				
+				// TODO - why do parallel streams not work?
+				// maybe something to do with this being static?
 				Optional<ResultsAndFunctionsWrapper> rafwOpt = impls.stream()
 					.map(intFunctions -> {
 						ResultsAndFunctionsWrapper resultsAndFunctions = testOneImpl(intFunctions, interfaceToImplement, methodToImplement, unitTestInstances);
@@ -180,7 +182,7 @@ public class Generator {
 					Result result = junitCore.run(testClass);
 					int ran = result.getRunCount();
 					int failed = result.getFailureCount();
-					System.out.println("Ran " + ran + " and " + failed + " failed");
+					//System.out.println("Ran " + ran + " and " + failed + " failed");
 					TestResults tr1 = new TestResults();
 					tr1.setRan(ran);
 					tr1.setFailed(failed);
@@ -199,13 +201,13 @@ public class Generator {
 	private static List<List<AbstractIntFunction>> evolve(List<List<AbstractIntFunction>> impls, ResultsAndFunctionsWrapper evolveFrom) {
 		
 		impls.clear();
-		List<AbstractIntFunction> intFunctionsA = ImplEvolver.evolveFrom(null);
-		List<AbstractIntFunction> intFunctionsB = ImplEvolver.evolveFrom(null);
-		List<AbstractIntFunction> intFunctionsC = ImplEvolver.evolveFrom(null);
+		List<AbstractIntFunction> intFunctionsNewA = ImplEvolver.evolveFrom(evolveFrom.getIntFunctions());
+		List<AbstractIntFunction> intFunctionsNewB = ImplEvolver.evolveFrom(evolveFrom.getIntFunctions());
+		List<AbstractIntFunction> intFunctionsNewC = ImplEvolver.evolveFrom(evolveFrom.getIntFunctions());
 		
-		impls.add(intFunctionsA);
-		impls.add(intFunctionsB);
-		impls.add(intFunctionsC);
+		impls.add(intFunctionsNewA);
+		impls.add(intFunctionsNewB);
+		impls.add(intFunctionsNewC);
 		
 		return impls;
 	}
