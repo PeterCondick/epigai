@@ -9,10 +9,12 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 
-import au.com.epigai.generator.functions.IntFunctionFirstFunction;
-import au.com.epigai.generator.functions.IntFunctionMultiplyImpl;
-import au.com.epigai.generator.functions.IntFunctionOneImpl;
-import au.com.epigai.generator.functions.IntFunctionSumImpl;
+import au.com.epigai.generator.functions.AbstractIntFunction;
+import au.com.epigai.generator.functions.intimpls.IntFunctionFirstFunction;
+import au.com.epigai.generator.functions.intimpls.IntFunctionMultiplyImpl;
+import au.com.epigai.generator.functions.intimpls.IntFunctionOneImpl;
+import au.com.epigai.generator.functions.intimpls.IntFunctionSumImpl;
+import au.com.epigai.generator.functions.intimpls.IntFunctionZeroImpl;
 
 public class ImplEvolver {
 	
@@ -26,6 +28,7 @@ public class ImplEvolver {
 		availableIntFunctions.put("O", IntFunctionOneImpl.class);
 		availableIntFunctions.put("S", IntFunctionSumImpl.class);
 		availableIntFunctions.put("M", IntFunctionMultiplyImpl.class);
+		availableIntFunctions.put("Z", IntFunctionZeroImpl.class);
 		
 		intFunctionKeys = new ArrayList<String>(availableIntFunctions.keySet());
 	}
@@ -44,29 +47,9 @@ public class ImplEvolver {
 		
 		int numberOfFunctions = numberOfNewFunctions();
 		
-//		int randomNumber = random.nextInt(intFunctionKeys.size());
-//		System.out.println("randomNumber is " + randomNumber);
-//		
-//		String key = intFunctionKeys.get(randomNumber);
-		
 		List<AbstractIntFunction> functionsChosen = new ArrayList<AbstractIntFunction>();
 		
 		functionsChosen = addFunctions(functionsChosen, numberOfFunctions);
-		
-//		for (int i = 0; i < numberOfFunctions; i++) {
-//			int randomNumber = random.nextInt(intFunctionKeys.size());
-//			//System.out.println("randomNumber is " + randomNumber);
-//			
-//			String key = intFunctionKeys.get(randomNumber);
-//			try {
-//				functionsChosen.add((AbstractIntFunction)availableIntFunctions.get(key).newInstance());
-//			} catch (Exception e) {
-//				// TODO - handle this more nicely
-//				throw new RuntimeException("caught an exception", e);
-//			}
-//		}
-		
-		//functionsChosen.add(availableIntFunctions.get(key));
 		
 		return functionsChosen;
 	}
@@ -128,7 +111,7 @@ public class ImplEvolver {
 	}
 	
 	private static int numberToAddFunctions() {
-		int maxNumToAdd = 1;
+		int maxNumToAdd = 3;
 		// returns 1 - maxNum
 		return 1 + random.nextInt(maxNumToAdd);
 		//return 1;

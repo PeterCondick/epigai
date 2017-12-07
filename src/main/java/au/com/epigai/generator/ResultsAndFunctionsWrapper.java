@@ -2,6 +2,8 @@ package au.com.epigai.generator;
 
 import java.util.List;
 
+import au.com.epigai.generator.functions.AbstractIntFunction;
+
 public class ResultsAndFunctionsWrapper {
 	
 	List<AbstractIntFunction> intFunctions;

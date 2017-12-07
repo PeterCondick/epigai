@@ -13,6 +13,8 @@ import java.util.stream.Collectors;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 
+import au.com.epigai.generator.functions.AbstractIntFunction;
+
 public class Generator {
 	
 	public static void generate(Class interfaceToImplement, Method methodToImplement, SpecUnitTest... unitTestInstances) {	
@@ -65,50 +67,21 @@ public class Generator {
 						return resultsAndFunctions;
 					}).max((rafw1, rafw2) -> {
 						// positive means first greater than second
-						if (rafw1.getTestResults().getPassed() >= rafw2.getTestResults().getPassed()) {
+						if (rafw1.getTestResults().getPassed() > rafw2.getTestResults().getPassed()) {
 							return 1;
+						} else if (rafw1.getTestResults().getPassed() == rafw2.getTestResults().getPassed()) {
+							// return the one with the fewest lines
+							if (rafw1.getIntFunctions().size() < rafw2.getIntFunctions().size()) {
+								return 1;
+							} else {
+								return -1;
+							}
 						} else {
 							return -1;
 						}
 					});
 				
-				
-//				MethodProxy methodProxy = new MethodProxy(interfaceToImplement, methodToImplement, intFunctions);
-//		
-//				Object proxy = Proxy.newProxyInstance(interfaceToImplement.getClassLoader(), new Class[] {interfaceToImplement}, methodProxy);
-//				
-//				// run the tests against the implementations
-//				
-//				List<Class> classes = new ArrayList<Class>();
-//				Arrays.stream(unitTestInstances)
-//						.forEach(unitTestInstance -> {
-//							if (unitTestInstance instanceof SpecUnitTest) {
-//								SpecUnitTest sut = (SpecUnitTest)unitTestInstance;
-//								sut.setInstanceToTest(proxy);
-//								classes.add(sut.getClass());
-//							}
-//						});
-//				
-//				// select the best one
-//				
-//				// evolve new implementations from that one
-//			
-//				TestResults testResults = classes.stream()
-//						.map(testClass -> {
-//							JUnitCore junitCore = new JUnitCore();
-//							Result result = junitCore.run(testClass);
-//							int ran = result.getRunCount();
-//							int failed = result.getFailureCount();
-//							System.out.println("Ran " + ran + " and " + failed + " failed");
-//							TestResults tr1 = new TestResults();
-//							tr1.setRan(ran);
-//							tr1.setFailed(failed);
-//							tr1.setPassed(ran - failed);
-//							return tr1;
-//						}).reduce(new TestResults(), (tr2, tr3) -> tr2.addAll(tr3));
-//				
-//				System.out.println("ran " + testResults.getRan() + " tests - passed: " + testResults.getPassed() + " failed: " + testResults.getFailed());
-				
+				// rafwOpt should now be the best result
 				if (rafwOpt.isPresent()) {
 					
 					TestResults testResults = rafwOpt.get().getTestResults();
@@ -127,12 +100,24 @@ public class Generator {
 							// evolve from the previous impl (current best)
 							System.out.println("##### Sticking with the previous solution #####");
 							evolve(impls, currentBest);
+						} else if (currentBest != null && currentBest.getTestResults().getPassed() == testResults.getPassed()) {
+							// found an equivalent solution
+							// evolve from the one with the least lines - or the new one if they are the same
+							if (currentBest.getIntFunctions().size() < rafwOpt.get().getIntFunctions().size()) {
+								// stay with current best
+								System.out.println("##### Sticking with the previous solution - less lines#####");
+								evolve(impls, currentBest);
+							} else {
+								// evolve from the new impl
+								System.out.println("####### New results are the new best solution - less or equal lines#########");
+								currentBest = rafwOpt.get();
+								evolve(impls, rafwOpt.get());
+							}
 						} else {
 							// found a new better solution
 							// evolve from the new impl
 							System.out.println("####### New results are the new best solution #########");
 							currentBest = rafwOpt.get();
-							//rafwOpt.get().getIntFunctions().stream().forEachOrdered(intFunction -> intFunction.printCode());
 							evolve(impls, rafwOpt.get());
 						}
 					} else {
@@ -160,8 +145,7 @@ public class Generator {
 		
 		Object proxy = Proxy.newProxyInstance(interfaceToImplement.getClassLoader(), new Class[] {interfaceToImplement}, methodProxy);
 		
-		// run the tests against the implementations
-		
+		// run the tests against the implementation
 		List<Class> classes = new ArrayList<Class>();
 		Arrays.stream(unitTestInstances)
 				.forEach(unitTestInstance -> {
@@ -171,10 +155,6 @@ public class Generator {
 						classes.add(sut.getClass());
 					}
 				});
-		
-		// select the best one
-		
-		// evolve new implementations from that one
 	
 		TestResults testResults = classes.stream()
 				.map(testClass -> {
@@ -204,10 +184,13 @@ public class Generator {
 		List<AbstractIntFunction> intFunctionsNewA = ImplEvolver.evolveFrom(evolveFrom.getIntFunctions());
 		List<AbstractIntFunction> intFunctionsNewB = ImplEvolver.evolveFrom(evolveFrom.getIntFunctions());
 		List<AbstractIntFunction> intFunctionsNewC = ImplEvolver.evolveFrom(evolveFrom.getIntFunctions());
+		// and bung in a new from scratch impl just in case it's gone the wrong way
+		List<AbstractIntFunction> intFunctionsNewD = ImplEvolver.evolveFrom(null);
 		
 		impls.add(intFunctionsNewA);
 		impls.add(intFunctionsNewB);
 		impls.add(intFunctionsNewC);
+		impls.add(intFunctionsNewD);
 		
 		return impls;
 	}

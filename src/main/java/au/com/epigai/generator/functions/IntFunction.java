@@ -1,4 +1,4 @@
-package au.com.epigai.generator;
+package au.com.epigai.generator.functions;
 
 public interface IntFunction {
 	

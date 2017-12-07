@@ -1,8 +1,8 @@
-package au.com.epigai.generator.functions;
+package au.com.epigai.generator.functions.intimpls;
 
-import au.com.epigai.generator.AbstractFunction;
-import au.com.epigai.generator.AbstractIntFunction;
-import au.com.epigai.generator.IntFunction;
+import au.com.epigai.generator.functions.AbstractFunction;
+import au.com.epigai.generator.functions.AbstractIntFunction;
+import au.com.epigai.generator.functions.IntFunction;
 
 public class IntFunctionOneImpl extends AbstractIntFunction {
 

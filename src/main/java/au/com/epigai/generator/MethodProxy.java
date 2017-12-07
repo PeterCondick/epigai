@@ -14,6 +14,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import au.com.epigai.generator.functions.AbstractIntFunction;
+
 public class MethodProxy implements InvocationHandler {
 	
 	private static final String VAR_NAME_PREFIX = "var";
@@ -106,23 +108,10 @@ public class MethodProxy implements InvocationHandler {
 					
 					// then we have to add the new var to variables and variableNames
 					saveReturnVar(returnType, returnVarName);
-//					variableNames.add(returnVarName);
-//					if (variables.containsKey(returnType.getName())) {
-//						// update
-//						variables.get(returnType.getName()).add(returnVarName);
-//					} else {
-//						// add it
-//						Set<String> varNames = Collections.synchronizedSet(new HashSet<String>());
-//						varNames.add(returnVarName);
-//						variables.put(returnType.getName(), varNames);
-//					}
 				}
 				
 			}
 		}
-		
-		// need a Map of key type and value list of variable names
-		//System.out.println("constructor finished");
 	}
 	
 	private String generateVarName() {
@@ -177,11 +166,6 @@ public class MethodProxy implements InvocationHandler {
 			// TODO for now just return the last variable
 			return lastReturnedVal;
 			
-//			AbstractIntFunction firstFunction = intFunctions.get(0);
-//			
-//			int a = firstFunction.function((Integer)args[0], (Integer)args[1]);
-			
-			//return a;
 		} else {
 			System.out.println("in the MethodProxy invocationHandler - wrong method");
 			throw new RuntimeException("method " + method.getName() + " not equal to methodToImplement " + methodToImplement.getName());

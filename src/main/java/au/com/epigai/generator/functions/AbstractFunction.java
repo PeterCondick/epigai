@@ -1,8 +1,7 @@
-package au.com.epigai.generator;
+package au.com.epigai.generator.functions;
 
-public abstract class AbstractFunction {
+public abstract class AbstractFunction extends AbstractStatement {
 	
-	private String[] parameterNames;
 	private String returnsName;
 	
 	/**
@@ -13,14 +12,6 @@ public abstract class AbstractFunction {
 	
 	public abstract Class[] getParameters();
 	
-	public abstract void printCode();
-	
-	public String[] getParameterNames() {
-		return parameterNames;
-	}
-	public void setParameterNames(String[] parameterNames) {
-		this.parameterNames = parameterNames;
-	}
 	public String getReturnsName() {
 		return returnsName;
 	}
