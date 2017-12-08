@@ -10,6 +10,7 @@ import java.util.Random;
 import java.util.Set;
 
 import au.com.epigai.generator.functions.AbstractIntFunction;
+import au.com.epigai.generator.functions.AbstractStatement;
 import au.com.epigai.generator.functions.intimpls.IntFunctionFirstFunction;
 import au.com.epigai.generator.functions.intimpls.IntFunctionMultiplyImpl;
 import au.com.epigai.generator.functions.intimpls.IntFunctionOneImpl;
@@ -33,9 +34,9 @@ public class ImplEvolver {
 		intFunctionKeys = new ArrayList<String>(availableIntFunctions.keySet());
 	}
 	
-	public static List<AbstractIntFunction> evolveFrom(List<AbstractIntFunction> existingFunctions) {
-		if (existingFunctions != null && existingFunctions.size() > 0) {
-			return evolve(existingFunctions);
+	public static List<AbstractStatement> evolveFrom(List<AbstractStatement> existingStatements) {
+		if (existingStatements != null && existingStatements.size() > 0) {
+			return evolve(existingStatements);
 		} else {
 			// random selection
 			System.out.println("ImplEvolver evolveFrom initialRandom");
@@ -43,39 +44,39 @@ public class ImplEvolver {
 		}
 	}
 	
-	private static List<AbstractIntFunction> initialRandom() {
+	private static List<AbstractStatement> initialRandom() {
 		
 		int numberOfFunctions = numberOfNewFunctions();
 		
-		List<AbstractIntFunction> functionsChosen = new ArrayList<AbstractIntFunction>();
+		List<AbstractStatement> functionsChosen = new ArrayList<AbstractStatement>();
 		
 		functionsChosen = addFunctions(functionsChosen, numberOfFunctions);
 		
 		return functionsChosen;
 	}
 	
-	private static List<AbstractIntFunction> evolve(List<AbstractIntFunction> existingFunctions) {
+	private static List<AbstractStatement> evolve(List<AbstractStatement> existingStatements) {
 		// first of all - create a new list then copy the functions from existing to the new list
-		List<AbstractIntFunction> evolvedFunctions = new ArrayList<AbstractIntFunction>();
-		evolvedFunctions.addAll(existingFunctions);
+		List<AbstractStatement> evolvedstatements = new ArrayList<AbstractStatement>();
+		evolvedstatements.addAll(existingStatements);
 		// delete 0, 1 or 2 functions from the end then add 1 or 2 functions - so we will always have at least one function
 		
 		// first of all - how many functions can we delete
 		// note - we can only delete functions from the end - if we delete intermediate ones we can't be sure the later ones
 		// won't depend on the variables the deleted ones returned
-		int numFuncsToDelete = numberToDeleteFunctions(evolvedFunctions.size());
+		int numStmtsToDelete = numberToDeleteFunctions(evolvedstatements.size());
 		//System.out.println("going to delete " + numFuncsToDelete + " while evolving");
-		for (int i = 0; i < numFuncsToDelete; i++) {
+		for (int i = 0; i < numStmtsToDelete; i++) {
 			//System.out.println("removing element " + (evolvedFunctions.size() - 1));
-			evolvedFunctions.remove(evolvedFunctions.size() - 1);
+			evolvedstatements.remove(evolvedstatements.size() - 1);
 		}
 		
 		// now how many functions can we add
-		int numFunctsToAdd = numberToAddFunctions();
+		int numStmtsToAdd = numberToAddFunctions();
 		//System.out.println("going to add " + numFunctsToAdd + " while evolving");
-		evolvedFunctions = addFunctions(evolvedFunctions, numFunctsToAdd);
+		evolvedstatements = addFunctions(evolvedstatements, numStmtsToAdd);
 		
-		return evolvedFunctions;
+		return evolvedstatements;
 	}
 	
 	private static int numberOfNewFunctions() {
@@ -83,7 +84,8 @@ public class ImplEvolver {
 		return 1 + random.nextInt(3);
 	}
 	
-	private static List<AbstractIntFunction> addFunctions(List<AbstractIntFunction> addTo, int numberToAdd) {
+	private static List<AbstractStatement> addFunctions(List<AbstractStatement> addTo, int numberToAdd) {
+		// TODO get it to add stuff other than int functions
 		for (int i = 0; i < numberToAdd; i++) {
 			int randomNumber = random.nextInt(intFunctionKeys.size());
 			//System.out.println("randomNumber is " + randomNumber);

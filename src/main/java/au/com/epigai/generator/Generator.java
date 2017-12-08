@@ -14,6 +14,7 @@ import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 
 import au.com.epigai.generator.functions.AbstractIntFunction;
+import au.com.epigai.generator.functions.AbstractStatement;
 
 public class Generator {
 	
@@ -41,15 +42,15 @@ public class Generator {
 			
 			boolean solutionFound = false;
 			// need to come up with a few random implementations of it
-			List<AbstractIntFunction> intFunctionsA = ImplEvolver.evolveFrom(null);
-			List<AbstractIntFunction> intFunctionsB = ImplEvolver.evolveFrom(null);
-			List<AbstractIntFunction> intFunctionsC = ImplEvolver.evolveFrom(null);
+			List<AbstractStatement> statementsA = ImplEvolver.evolveFrom(null);
+			List<AbstractStatement> statementsB = ImplEvolver.evolveFrom(null);
+			List<AbstractStatement> statementsC = ImplEvolver.evolveFrom(null);
 			
-			List<List<AbstractIntFunction>> impls = new ArrayList<List<AbstractIntFunction>>();
+			List<List<AbstractStatement>> impls = new ArrayList<List<AbstractStatement>>();
 			
-			impls.add(intFunctionsA);
-			impls.add(intFunctionsB);
-			impls.add(intFunctionsC);
+			impls.add(statementsA);
+			impls.add(statementsB);
+			impls.add(statementsC);
 			
 			// as well as functions - needs to know
 			// what variables it has
@@ -62,8 +63,8 @@ public class Generator {
 				// TODO - why do parallel streams not work?
 				// maybe something to do with this being static?
 				Optional<ResultsAndFunctionsWrapper> rafwOpt = impls.stream()
-					.map(intFunctions -> {
-						ResultsAndFunctionsWrapper resultsAndFunctions = testOneImpl(intFunctions, interfaceToImplement, methodToImplement, unitTestInstances);
+					.map(statements -> {
+						ResultsAndFunctionsWrapper resultsAndFunctions = testOneImpl(statements, interfaceToImplement, methodToImplement, unitTestInstances);
 						return resultsAndFunctions;
 					}).max((rafw1, rafw2) -> {
 						// positive means first greater than second
@@ -71,7 +72,7 @@ public class Generator {
 							return 1;
 						} else if (rafw1.getTestResults().getPassed() == rafw2.getTestResults().getPassed()) {
 							// return the one with the fewest lines
-							if (rafw1.getIntFunctions().size() < rafw2.getIntFunctions().size()) {
+							if (rafw1.getStatements().size() < rafw2.getStatements().size()) {
 								return 1;
 							} else {
 								return -1;
@@ -88,10 +89,10 @@ public class Generator {
 					
 					if (testResults.getFailed() > 0) {
 						System.out.println("##### New results ##### passed " + testResults.getPassed() + " failed " + testResults.getFailed());
-						rafwOpt.get().getIntFunctions().stream().forEachOrdered(intFunction -> intFunction.printCode());
+						rafwOpt.get().getStatements().stream().forEachOrdered(intFunction -> intFunction.printCode());
 						if (currentBest != null) {
 							System.out.println("##### Current best solution ##### passed " + currentBest.getTestResults().getPassed() + " failed " + currentBest.getTestResults().getFailed());
-							currentBest.getIntFunctions().stream().forEachOrdered(intFunction -> intFunction.printCode());
+							currentBest.getStatements().stream().forEachOrdered(intFunction -> intFunction.printCode());
 						} else {
 							System.out.println("##### No current solution #####");
 						}
@@ -103,7 +104,7 @@ public class Generator {
 						} else if (currentBest != null && currentBest.getTestResults().getPassed() == testResults.getPassed()) {
 							// found an equivalent solution
 							// evolve from the one with the least lines - or the new one if they are the same
-							if (currentBest.getIntFunctions().size() < rafwOpt.get().getIntFunctions().size()) {
+							if (currentBest.getStatements().size() < rafwOpt.get().getStatements().size()) {
 								// stay with current best
 								System.out.println("##### Sticking with the previous solution - less lines#####");
 								evolve(impls, currentBest);
@@ -123,7 +124,7 @@ public class Generator {
 					} else {
 						solutionFound = true;
 						System.out.println("####### Found a solution #########");
-						rafwOpt.get().getIntFunctions().stream().forEachOrdered(intFunction -> intFunction.printCode());
+						rafwOpt.get().getStatements().stream().forEachOrdered(statement -> statement.printCode());
 						// TODO - the returns statement
 					}
 				} else {
@@ -136,12 +137,12 @@ public class Generator {
 		
 	}
 	
-	private static ResultsAndFunctionsWrapper testOneImpl(List<AbstractIntFunction> intFunctions, 
+	private static ResultsAndFunctionsWrapper testOneImpl(List<AbstractStatement> statements, 
 													Class interfaceToImplement, 
 													Method methodToImplement, 
 													SpecUnitTest... unitTestInstances) {
 		
-		MethodProxy methodProxy = new MethodProxy(interfaceToImplement, methodToImplement, intFunctions);
+		MethodProxy methodProxy = new MethodProxy(interfaceToImplement, methodToImplement, statements);
 		
 		Object proxy = Proxy.newProxyInstance(interfaceToImplement.getClassLoader(), new Class[] {interfaceToImplement}, methodProxy);
 		
@@ -173,24 +174,24 @@ public class Generator {
 		System.out.println("ran " + testResults.getRan() + " tests - passed: " + testResults.getPassed() + " failed: " + testResults.getFailed());
 		
 		ResultsAndFunctionsWrapper resultsAndFunctions = new ResultsAndFunctionsWrapper();
-		resultsAndFunctions.setIntFunctions(intFunctions);
+		resultsAndFunctions.setStatements(statements);
 		resultsAndFunctions.setTestResults(testResults);
 		return resultsAndFunctions;
 	}
 	
-	private static List<List<AbstractIntFunction>> evolve(List<List<AbstractIntFunction>> impls, ResultsAndFunctionsWrapper evolveFrom) {
+	private static List<List<AbstractStatement>> evolve(List<List<AbstractStatement>> impls, ResultsAndFunctionsWrapper evolveFrom) {
 		
 		impls.clear();
-		List<AbstractIntFunction> intFunctionsNewA = ImplEvolver.evolveFrom(evolveFrom.getIntFunctions());
-		List<AbstractIntFunction> intFunctionsNewB = ImplEvolver.evolveFrom(evolveFrom.getIntFunctions());
-		List<AbstractIntFunction> intFunctionsNewC = ImplEvolver.evolveFrom(evolveFrom.getIntFunctions());
+		List<AbstractStatement> statementsNewA = ImplEvolver.evolveFrom(evolveFrom.getStatements());
+		List<AbstractStatement> statementsNewB = ImplEvolver.evolveFrom(evolveFrom.getStatements());
+		List<AbstractStatement> statementsNewC = ImplEvolver.evolveFrom(evolveFrom.getStatements());
 		// and bung in a new from scratch impl just in case it's gone the wrong way
-		List<AbstractIntFunction> intFunctionsNewD = ImplEvolver.evolveFrom(null);
+		List<AbstractStatement> statementsNewD = ImplEvolver.evolveFrom(null);
 		
-		impls.add(intFunctionsNewA);
-		impls.add(intFunctionsNewB);
-		impls.add(intFunctionsNewC);
-		impls.add(intFunctionsNewD);
+		impls.add(statementsNewA);
+		impls.add(statementsNewB);
+		impls.add(statementsNewC);
+		impls.add(statementsNewD);
 		
 		return impls;
 	}
