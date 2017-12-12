@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import au.com.epigai.generator.functions.AbstractIntFunction;
 import au.com.epigai.generator.functions.AbstractStatement;
 import au.com.epigai.generator.functions.FlowControl;
+import au.com.epigai.generator.functions.flowimpls.FlowControlReturn;
 
 public class MethodProxy implements InvocationHandler {
 	
@@ -24,40 +25,47 @@ public class MethodProxy implements InvocationHandler {
 	
 	private Class interfaceToImplement;
 	private Method methodToImplement;
-	private List<AbstractStatement> statements;
-	// this will contain variable values by variable name
-	private Map<String, Object> variableValues = new HashMap<String, Object>();
-	// this will contain all the variable names for each type (ie, int, String) of variable
-	private Map<String, Set<String>> variables;
-	private Set<String> variableNames = Collections.synchronizedSet(new HashSet<String>());
+	
+	private CodeBlock codeBlock;
+	
+//	private List<AbstractStatement> statements;
+//	// this will contain variable values by variable name
+//	private Map<String, Object> variableValues = new HashMap<String, Object>();
+//	// this will contain all the variable names for each type (ie, int, String) of variable
+//	private Map<String, Set<String>> variables;
+//	private Set<String> variableNames = Collections.synchronizedSet(new HashSet<String>());
 	
 	private int nameSequence = 1;
 	
-	public MethodProxy(Class interfaceToImplement, Method methodToImplement, List<AbstractStatement> statements) {
+	public MethodProxy(Class interfaceToImplement, Method methodToImplement, CodeBlock codeBlock) {
 		this.interfaceToImplement = interfaceToImplement;
 		this.methodToImplement = methodToImplement;
-		this.statements = statements;
+		this.codeBlock = codeBlock;
 		
 		Parameter[] parameters = methodToImplement.getParameters();
-		this.variables = Arrays.stream(parameters).collect(Collectors.toMap(parameter -> parameter.getType().getName(), parameter -> {
-			Set<String> varNames = Collections.synchronizedSet(new HashSet<String>());
-			varNames.add(parameter.getName());
-			
-			// TODO is this ok - a cheeky side effect - probably should be in an intermediate map/forEach
-			variableNames.add(parameter.getName());
-			
-			return varNames;
-		}, (vN1, vN2) -> {
-			vN1.addAll(vN2);
-			return vN1;
-		}));
+		Map<String, Set<String>> variables = Arrays.stream(parameters).collect(Collectors.toMap(parameter -> parameter.getType().getName(), 
+			parameter -> {
+				Set<String> varNames = Collections.synchronizedSet(new HashSet<String>());
+				varNames.add(parameter.getName());
+				
+				// TODO is this ok - a cheeky side effect - probably should be in an intermediate map/forEach
+				codeBlock.addToVariableNames(parameter.getName());
+				
+				return varNames;
+			}, (vN1, vN2) -> {
+				vN1.addAll(vN2);
+				return vN1;
+			}));
+		this.codeBlock.setVariables(variables);
+		
+		String lastRetValName = "";
 		
 		// go through the functions in order
 		// work out what variables there are and randomly decide what variables to pass
 		// if not void work out a name of the returned variable and add to the function
 		// set the names of the variables called with 
 		// this needs to be a for loop not a stream because we want to modify the nameSequence var inside the loop
-		for (AbstractStatement statement : statements) {
+		for (AbstractStatement statement : codeBlock.getStatements()) {
 			// TODO this if statement is making the assumption that all functions have parameters
 			// at the moment they do but in the future they might not then this will need to change
 			if (statement instanceof AbstractIntFunction) {
@@ -72,6 +80,7 @@ public class MethodProxy implements InvocationHandler {
 						if (retName == null) {
 							throw new RuntimeException("Function has parameter names set but not the return name");
 						}
+						lastRetValName = retName;
 						saveReturnVar(returnType, retName);
 					} // else do nothing - the function returns void
 				} else {
@@ -102,20 +111,26 @@ public class MethodProxy implements InvocationHandler {
 					if (returnType != null) {
 						// generate a name
 						String returnVarName = generateVarName();
-						boolean nameNotUnique = variableNames.contains(returnVarName);
+						boolean nameNotUnique = codeBlock.getVariableNames().contains(returnVarName);
 						while (nameNotUnique) {
 							returnVarName = generateVarName();
-							nameNotUnique = variableNames.contains(returnVarName);
+							nameNotUnique = codeBlock.getVariableNames().contains(returnVarName);
 						}
 						// so here we have a unique var name
 						intFunction.setReturnsName(returnVarName);
 						
 						// then we have to add the new var to variables and variableNames
+						lastRetValName = returnVarName;
 						saveReturnVar(returnType, returnVarName);
 					}
 					
 				}
 			} else if (statement instanceof FlowControl) {
+				if (statement instanceof FlowControlReturn) {
+					FlowControlReturn fcr = (FlowControlReturn)statement;
+					// set the param to be the last variable that was added
+					fcr.setParameterNames(new String[] {lastRetValName});
+				}
 				// TODO
 			} else {
 				throw new RuntimeException("statement of a type that is not yet implemented");
@@ -130,15 +145,17 @@ public class MethodProxy implements InvocationHandler {
 	}
 	
 	private void saveReturnVar(Class returnType, String returnVarName) {
-		variableNames.add(returnVarName);
-		if (variables.containsKey(returnType.getName())) {
+		// variable names
+		codeBlock.addToVariableNames(returnVarName);
+		// variables
+		if (codeBlock.getVariables().containsKey(returnType.getName())) {
 			// update
-			variables.get(returnType.getName()).add(returnVarName);
+			codeBlock.getVariables().get(returnType.getName()).add(returnVarName);
 		} else {
 			// add it
 			Set<String> varNames = Collections.synchronizedSet(new HashSet<String>());
 			varNames.add(returnVarName);
-			variables.put(returnType.getName(), varNames);
+			codeBlock.addToVariables(returnType.getName(), varNames);
 		}
 	}
 	
@@ -153,13 +170,13 @@ public class MethodProxy implements InvocationHandler {
 			// populate variableValues with the passed in args
 			Parameter[] params = method.getParameters();
 			for (int i = 0; i < params.length; i++) {
-				variableValues.put(params[i].getName(), args[i]);
+				codeBlock.addToVariableValues(params[i].getName(), args[i]);
 			}
 			
 			int lastReturnedVal = 0;
 			
 			// for each function
-			for (AbstractStatement statement : statements) {
+			for (AbstractStatement statement : codeBlock.getStatements()) {
 				if (statement instanceof AbstractIntFunction) {
 					AbstractIntFunction intFunction = (AbstractIntFunction)statement;
 					// get the names of it's args
@@ -167,9 +184,9 @@ public class MethodProxy implements InvocationHandler {
 					// get the values of those args
 					// TODO making an assumption everything has two params here
 					// invoke the function
-					int retVal = intFunction.function((Integer)variableValues.get(paramNames[0]), (Integer)variableValues.get(paramNames[1]));
+					int retVal = intFunction.function((Integer)codeBlock.getVariableValues().get(paramNames[0]), (Integer)codeBlock.getVariableValues().get(paramNames[1]));
 					// store the returned value in variableValues with the returned name
-					variableValues.put(intFunction.getReturnsName(), retVal);
+					codeBlock.addToVariableValues(intFunction.getReturnsName(), retVal);
 					//System.out.println("variable " + intFunction.getReturnsName() + " set to " + retVal);
 					lastReturnedVal = retVal;
 				} else if (statement instanceof FlowControl) {

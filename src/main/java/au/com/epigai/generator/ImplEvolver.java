@@ -1,5 +1,6 @@
 package au.com.epigai.generator;
 
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -11,6 +12,7 @@ import java.util.Set;
 
 import au.com.epigai.generator.functions.AbstractIntFunction;
 import au.com.epigai.generator.functions.AbstractStatement;
+import au.com.epigai.generator.functions.flowimpls.FlowControlReturn;
 import au.com.epigai.generator.functions.intimpls.IntFunctionFirstFunction;
 import au.com.epigai.generator.functions.intimpls.IntFunctionMultiplyImpl;
 import au.com.epigai.generator.functions.intimpls.IntFunctionOneImpl;
@@ -22,6 +24,9 @@ public class ImplEvolver {
 	private static final Map<String, Class> availableIntFunctions = new HashMap<String, Class>();
 	private static final List<String> intFunctionKeys;
 	
+	private static final Map<String, Class> availableFlowControls = new HashMap<String, Class>();
+	private static final List<String> flowControlKeys;
+	
 	private static Random random = new Random();
 	
 	static {
@@ -32,10 +37,16 @@ public class ImplEvolver {
 		availableIntFunctions.put("Z", IntFunctionZeroImpl.class);
 		
 		intFunctionKeys = new ArrayList<String>(availableIntFunctions.keySet());
+		
+		availableFlowControls.put("R", FlowControlReturn.class);
+		
+		flowControlKeys = new ArrayList<String>(availableFlowControls.keySet());
 	}
 	
-	public static List<AbstractStatement> evolveFrom(List<AbstractStatement> existingStatements) {
-		if (existingStatements != null && existingStatements.size() > 0) {
+	public static CodeBlock evolveFrom(CodeBlock existingStatements) {
+		if (existingStatements != null && 
+				existingStatements.getStatements() != null && 
+				existingStatements.getStatements().size() > 0) {
 			return evolve(existingStatements);
 		} else {
 			// random selection
@@ -44,7 +55,7 @@ public class ImplEvolver {
 		}
 	}
 	
-	private static List<AbstractStatement> initialRandom() {
+	private static CodeBlock initialRandom() {
 		
 		int numberOfFunctions = numberOfNewFunctions();
 		
@@ -52,14 +63,31 @@ public class ImplEvolver {
 		
 		functionsChosen = addFunctions(functionsChosen, numberOfFunctions);
 		
-		return functionsChosen;
+		// add a return statement
+		// TODO - do this properly once flow controls are implemented properly
+		try {
+			Constructor fcrConstructor = availableFlowControls.get("R").getConstructor();
+			functionsChosen.add((AbstractStatement)fcrConstructor.newInstance());
+		} catch (Exception e) {
+			// TODO - handle this more nicely
+			throw new RuntimeException("caught an exception", e);
+		}
+		
+		CodeBlock codeBlock = new CodeBlock();
+		codeBlock.setStatements(functionsChosen);
+		return codeBlock;
 	}
 	
-	private static List<AbstractStatement> evolve(List<AbstractStatement> existingStatements) {
+	private static CodeBlock evolve(CodeBlock codeBlock) {
 		// first of all - create a new list then copy the functions from existing to the new list
 		List<AbstractStatement> evolvedstatements = new ArrayList<AbstractStatement>();
-		evolvedstatements.addAll(existingStatements);
+		evolvedstatements.addAll(codeBlock.getStatements());
 		// delete 0, 1 or 2 functions from the end then add 1 or 2 functions - so we will always have at least one function
+		
+		// always remove the return statement
+		if (evolvedstatements.get(evolvedstatements.size() - 1) instanceof FlowControlReturn) {
+			evolvedstatements.remove(evolvedstatements.size() - 1);
+		}
 		
 		// first of all - how many functions can we delete
 		// note - we can only delete functions from the end - if we delete intermediate ones we can't be sure the later ones
@@ -76,7 +104,19 @@ public class ImplEvolver {
 		//System.out.println("going to add " + numFunctsToAdd + " while evolving");
 		evolvedstatements = addFunctions(evolvedstatements, numStmtsToAdd);
 		
-		return evolvedstatements;
+		// add a return statement
+		// TODO - do this properly once flow controls are implemented properly
+		try {
+			Constructor fcrConstructor = availableFlowControls.get("R").getConstructor();
+			evolvedstatements.add((AbstractStatement)fcrConstructor.newInstance());
+		} catch (Exception e) {
+			// TODO - handle this more nicely
+			throw new RuntimeException("caught an exception", e);
+		}
+		
+		CodeBlock newCodeBlock = new CodeBlock();
+		newCodeBlock.setStatements(evolvedstatements);
+		return newCodeBlock;
 	}
 	
 	private static int numberOfNewFunctions() {
@@ -92,7 +132,9 @@ public class ImplEvolver {
 			
 			String key = intFunctionKeys.get(randomNumber);
 			try {
-				addTo.add((AbstractIntFunction)availableIntFunctions.get(key).newInstance());
+				Constructor constructor = availableIntFunctions.get(key).getConstructor();
+				addTo.add((AbstractStatement)constructor.newInstance());
+				//addTo.add((AbstractIntFunction)availableIntFunctions.get(key).newInstance());
 			} catch (Exception e) {
 				// TODO - handle this more nicely
 				throw new RuntimeException("caught an exception", e);
@@ -116,7 +158,6 @@ public class ImplEvolver {
 		int maxNumToAdd = 3;
 		// returns 1 - maxNum
 		return 1 + random.nextInt(maxNumToAdd);
-		//return 1;
 	}
 	
 }

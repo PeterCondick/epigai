@@ -42,15 +42,15 @@ public class Generator {
 			
 			boolean solutionFound = false;
 			// need to come up with a few random implementations of it
-			List<AbstractStatement> statementsA = ImplEvolver.evolveFrom(null);
-			List<AbstractStatement> statementsB = ImplEvolver.evolveFrom(null);
-			List<AbstractStatement> statementsC = ImplEvolver.evolveFrom(null);
+			CodeBlock codeBlockA = ImplEvolver.evolveFrom(null);
+			CodeBlock codeBlockB = ImplEvolver.evolveFrom(null);
+			CodeBlock codeBlockC = ImplEvolver.evolveFrom(null);
 			
-			List<List<AbstractStatement>> impls = new ArrayList<List<AbstractStatement>>();
+			List<CodeBlock> impls = new ArrayList<CodeBlock>();
 			
-			impls.add(statementsA);
-			impls.add(statementsB);
-			impls.add(statementsC);
+			impls.add(codeBlockA);
+			impls.add(codeBlockB);
+			impls.add(codeBlockC);
 			
 			// as well as functions - needs to know
 			// what variables it has
@@ -63,8 +63,8 @@ public class Generator {
 				// TODO - why do parallel streams not work?
 				// maybe something to do with this being static?
 				Optional<ResultsAndFunctionsWrapper> rafwOpt = impls.stream()
-					.map(statements -> {
-						ResultsAndFunctionsWrapper resultsAndFunctions = testOneImpl(statements, interfaceToImplement, methodToImplement, unitTestInstances);
+					.map(codeBlock -> {
+						ResultsAndFunctionsWrapper resultsAndFunctions = testOneImpl(codeBlock, interfaceToImplement, methodToImplement, unitTestInstances);
 						return resultsAndFunctions;
 					}).max((rafw1, rafw2) -> {
 						// positive means first greater than second
@@ -72,7 +72,7 @@ public class Generator {
 							return 1;
 						} else if (rafw1.getTestResults().getPassed() == rafw2.getTestResults().getPassed()) {
 							// return the one with the fewest lines
-							if (rafw1.getStatements().size() < rafw2.getStatements().size()) {
+							if (rafw1.getCodeBlock().getStatements().size() < rafw2.getCodeBlock().getStatements().size()) {
 								return 1;
 							} else {
 								return -1;
@@ -89,10 +89,10 @@ public class Generator {
 					
 					if (testResults.getFailed() > 0) {
 						System.out.println("##### New results ##### passed " + testResults.getPassed() + " failed " + testResults.getFailed());
-						rafwOpt.get().getStatements().stream().forEachOrdered(intFunction -> intFunction.printCode());
+						rafwOpt.get().getCodeBlock().printCode();
 						if (currentBest != null) {
 							System.out.println("##### Current best solution ##### passed " + currentBest.getTestResults().getPassed() + " failed " + currentBest.getTestResults().getFailed());
-							currentBest.getStatements().stream().forEachOrdered(intFunction -> intFunction.printCode());
+							currentBest.getCodeBlock().printCode();
 						} else {
 							System.out.println("##### No current solution #####");
 						}
@@ -104,7 +104,7 @@ public class Generator {
 						} else if (currentBest != null && currentBest.getTestResults().getPassed() == testResults.getPassed()) {
 							// found an equivalent solution
 							// evolve from the one with the least lines - or the new one if they are the same
-							if (currentBest.getStatements().size() < rafwOpt.get().getStatements().size()) {
+							if (currentBest.getCodeBlock().getStatements().size() < rafwOpt.get().getCodeBlock().getStatements().size()) {
 								// stay with current best
 								System.out.println("##### Sticking with the previous solution - less lines#####");
 								evolve(impls, currentBest);
@@ -124,7 +124,7 @@ public class Generator {
 					} else {
 						solutionFound = true;
 						System.out.println("####### Found a solution #########");
-						rafwOpt.get().getStatements().stream().forEachOrdered(statement -> statement.printCode());
+						rafwOpt.get().getCodeBlock().printCode();
 						// TODO - the returns statement
 					}
 				} else {
@@ -137,12 +137,12 @@ public class Generator {
 		
 	}
 	
-	private static ResultsAndFunctionsWrapper testOneImpl(List<AbstractStatement> statements, 
+	private static ResultsAndFunctionsWrapper testOneImpl(CodeBlock codeBlock, 
 													Class interfaceToImplement, 
 													Method methodToImplement, 
 													SpecUnitTest... unitTestInstances) {
 		
-		MethodProxy methodProxy = new MethodProxy(interfaceToImplement, methodToImplement, statements);
+		MethodProxy methodProxy = new MethodProxy(interfaceToImplement, methodToImplement, codeBlock);
 		
 		Object proxy = Proxy.newProxyInstance(interfaceToImplement.getClassLoader(), new Class[] {interfaceToImplement}, methodProxy);
 		
@@ -174,24 +174,24 @@ public class Generator {
 		System.out.println("ran " + testResults.getRan() + " tests - passed: " + testResults.getPassed() + " failed: " + testResults.getFailed());
 		
 		ResultsAndFunctionsWrapper resultsAndFunctions = new ResultsAndFunctionsWrapper();
-		resultsAndFunctions.setStatements(statements);
+		resultsAndFunctions.setCodeBlock(codeBlock);
 		resultsAndFunctions.setTestResults(testResults);
 		return resultsAndFunctions;
 	}
 	
-	private static List<List<AbstractStatement>> evolve(List<List<AbstractStatement>> impls, ResultsAndFunctionsWrapper evolveFrom) {
+	private static List<CodeBlock> evolve(List<CodeBlock> impls, ResultsAndFunctionsWrapper evolveFrom) {
 		
 		impls.clear();
-		List<AbstractStatement> statementsNewA = ImplEvolver.evolveFrom(evolveFrom.getStatements());
-		List<AbstractStatement> statementsNewB = ImplEvolver.evolveFrom(evolveFrom.getStatements());
-		List<AbstractStatement> statementsNewC = ImplEvolver.evolveFrom(evolveFrom.getStatements());
+		CodeBlock codeBlockNewA = ImplEvolver.evolveFrom(evolveFrom.getCodeBlock());
+		CodeBlock codeBlockNewB = ImplEvolver.evolveFrom(evolveFrom.getCodeBlock());
+		CodeBlock codeBlockNewC = ImplEvolver.evolveFrom(evolveFrom.getCodeBlock());
 		// and bung in a new from scratch impl just in case it's gone the wrong way
-		List<AbstractStatement> statementsNewD = ImplEvolver.evolveFrom(null);
+		CodeBlock codeBlockNewD = ImplEvolver.evolveFrom(null);
 		
-		impls.add(statementsNewA);
-		impls.add(statementsNewB);
-		impls.add(statementsNewC);
-		impls.add(statementsNewD);
+		impls.add(codeBlockNewA);
+		impls.add(codeBlockNewB);
+		impls.add(codeBlockNewC);
+		impls.add(codeBlockNewD);
 		
 		return impls;
 	}
