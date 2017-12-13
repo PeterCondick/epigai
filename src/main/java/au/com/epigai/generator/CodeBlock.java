@@ -60,6 +60,13 @@ public class CodeBlock {
 	public void setParentBlock(CodeBlock parentBlock) {
 		this.parentBlock = parentBlock;
 	}
+	public boolean isTopLevelParent() {
+		if (this.parentBlock == null) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 	
 	public void printCode() {
 		getStatements().stream().forEachOrdered(statement -> statement.printCode());
