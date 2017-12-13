@@ -4,12 +4,12 @@
 
 Single celled organisms can learn through epigenetics. Genes are switched on or switched off until the required behaviour is achieved.
 
-This project is an attempt to do something similar in code.
+This project is an attempt to do something similar in java code.
 
 # Generate code from an interface and unit tests
 
-Starting with a list of possible code instructions, an interface and unit tests that specify the required behaviour epigai can evolve an
-implementation that passes all the unit tests.
+Starting with a list of possible java code instructions, an interface and unit tests that specify the required behaviour epigai can evolve a
+java implementation that passes all the unit tests.
 
 # To Use
 
@@ -79,9 +79,11 @@ return var5;
 called the generator
 ```
 
+You're done. No need to write the implementation yourself.
+
 Note - currently epigai is quite limited in functionality. Only int parameters are catered for, and a limited range of operations are available.
 
-See the project https://github.com/PeterCondick/egaiuser for an example project that uses this project to evolve code.
+See the project [https://github.com/PeterCondick/egaiuser](https://github.com/PeterCondick/egaiuser) for an example project that uses this project to evolve code.
 
 
 
