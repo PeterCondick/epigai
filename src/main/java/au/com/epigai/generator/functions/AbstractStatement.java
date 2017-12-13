@@ -1,10 +1,10 @@
 package au.com.epigai.generator.functions;
 
-public abstract class AbstractStatement {
+import au.com.epigai.generator.PrintableCode;
+
+public abstract class AbstractStatement implements PrintableCode {
 	
 	private String[] parameterNames;
-	
-	public abstract void printCode();
 	
 	public String[] getParameterNames() {
 		return parameterNames;

@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -173,31 +174,41 @@ public class MethodProxy implements InvocationHandler {
 				codeBlock.addToVariableValues(params[i].getName(), args[i]);
 			}
 			
-			int lastReturnedVal = 0;
+			Optional<Optional<Object>> retValOO = codeBlock.execute();
 			
-			// for each function
-			for (AbstractStatement statement : codeBlock.getStatements()) {
-				if (statement instanceof AbstractIntFunction) {
-					AbstractIntFunction intFunction = (AbstractIntFunction)statement;
-					// get the names of it's args
-					String[] paramNames = intFunction.getParameterNames();
-					// get the values of those args
-					// TODO making an assumption everything has two params here
-					// invoke the function
-					int retVal = intFunction.function((Integer)codeBlock.getVariableValues().get(paramNames[0]), (Integer)codeBlock.getVariableValues().get(paramNames[1]));
-					// store the returned value in variableValues with the returned name
-					codeBlock.addToVariableValues(intFunction.getReturnsName(), retVal);
-					//System.out.println("variable " + intFunction.getReturnsName() + " set to " + retVal);
-					lastReturnedVal = retVal;
-				} else if (statement instanceof FlowControl) {
-					// TODO
-				} else {
-					throw new RuntimeException("not yet implemented");
-				}
+			// able to hard code this like this as we know this is a top level block
+			// TODO once dealing with stuff other than just ints will need to revisit this (ie a method may return void)
+			if (retValOO.isPresent() && retValOO.get().isPresent()) {
+				return retValOO.get().get();
+			} else {
+				return 0;
 			}
 			
-			// TODO for now just return the last variable
-			return lastReturnedVal;
+//			int lastReturnedVal = 0;
+//			
+//			// for each function
+//			for (AbstractStatement statement : codeBlock.getStatements()) {
+//				if (statement instanceof AbstractIntFunction) {
+//					AbstractIntFunction intFunction = (AbstractIntFunction)statement;
+//					// get the names of it's args
+//					String[] paramNames = intFunction.getParameterNames();
+//					// get the values of those args
+//					// TODO making an assumption everything has two params here
+//					// invoke the function
+//					int retVal = intFunction.function((Integer)codeBlock.getVariableValues().get(paramNames[0]), (Integer)codeBlock.getVariableValues().get(paramNames[1]));
+//					// store the returned value in variableValues with the returned name
+//					codeBlock.addToVariableValues(intFunction.getReturnsName(), retVal);
+//					//System.out.println("variable " + intFunction.getReturnsName() + " set to " + retVal);
+//					lastReturnedVal = retVal;
+//				} else if (statement instanceof FlowControl) {
+//					// TODO
+//				} else {
+//					throw new RuntimeException("not yet implemented");
+//				}
+//			}
+//			
+//			// TODO for now just return the last variable
+//			return lastReturnedVal;
 			
 		} else {
 			System.out.println("in the MethodProxy invocationHandler - wrong method");
