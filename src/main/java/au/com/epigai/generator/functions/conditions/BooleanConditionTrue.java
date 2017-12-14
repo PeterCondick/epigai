@@ -1,5 +1,7 @@
 package au.com.epigai.generator.functions.conditions;
 
+import java.util.Optional;
+
 public class BooleanConditionTrue extends AbstractBooleanCondition {
 	
 	@Override
@@ -13,13 +15,10 @@ public class BooleanConditionTrue extends AbstractBooleanCondition {
 	}
 
 	@Override
-	public Class getFirstParameterType() {
-		return null;
+	public Optional<Class[]> getParameters() {
+		return Optional.empty();
 	}
 
-	@Override
-	public Class getSecondParameterType() {
-		return null;
-	}
+	
 	
 }

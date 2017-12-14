@@ -1,8 +1,8 @@
 package au.com.epigai.generator.functions.intimpls;
 
-import au.com.epigai.generator.functions.AbstractFunction;
+import java.util.Optional;
+
 import au.com.epigai.generator.functions.AbstractIntFunction;
-import au.com.epigai.generator.functions.IntFunction;
 
 public class IntFunctionOneImpl extends AbstractIntFunction {
 
@@ -13,9 +13,8 @@ public class IntFunctionOneImpl extends AbstractIntFunction {
 	}
 
 	@Override
-	public Class[] getParameters() {
-		// TODO Auto-generated method stub
-		return new Class[]{int.class, int.class};
+	public Optional<Class[]> getParameters() {
+		return Optional.of(new Class[]{int.class, int.class});
 	}
 	
 	@Override
@@ -25,7 +24,6 @@ public class IntFunctionOneImpl extends AbstractIntFunction {
 
 	@Override
 	public void printCode() {
-		//System.out.println("1;");
 		System.out.println(getReturns().getName() + " " + getReturnsName() + " = 1;");
 	}
 

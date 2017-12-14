@@ -10,8 +10,6 @@ public abstract class AbstractFunction extends AbstractStatement {
 	 */
 	public abstract Class getReturns();
 	
-	public abstract Class[] getParameters();
-	
 	public String getReturnsName() {
 		return returnsName;
 	}

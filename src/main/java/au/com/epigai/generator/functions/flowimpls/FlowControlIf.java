@@ -1,11 +1,11 @@
 package au.com.epigai.generator.functions.flowimpls;
 
 import java.util.List;
+import java.util.Optional;
 
 import au.com.epigai.generator.functions.AbstractStatement;
 import au.com.epigai.generator.functions.FlowControl;
 import au.com.epigai.generator.functions.conditions.AbstractBooleanCondition;
-import au.com.epigai.generator.functions.conditions.BooleanCondition;
 
 public class FlowControlIf extends AbstractStatement implements FlowControl {
 	
@@ -34,6 +34,11 @@ public class FlowControlIf extends AbstractStatement implements FlowControl {
 
 	public void setStatementBlock(List<AbstractStatement> statementBlock) {
 		this.statementBlock = statementBlock;
+	}
+
+	@Override
+	public Optional<Class[]> getParameters() {
+		return Optional.of(new Class[]{Object.class, Object.class});
 	}
 	
 	

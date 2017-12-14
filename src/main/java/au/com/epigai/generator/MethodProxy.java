@@ -87,7 +87,11 @@ public class MethodProxy implements InvocationHandler {
 				} else {
 					// this is a new function
 					// set the parameter names in the function
-					Class[] params = intFunction.getParameters();
+					Optional<Class[]> paramsOpt = intFunction.getParameters();
+					Class[] params = null;
+					if (paramsOpt.isPresent()) {
+						params = paramsOpt.get();
+					}
 					if (params != null && params.length > 0) {
 						// TODO AHHHGGG - java 7
 						String[] parameterNames = new String[params.length];
