@@ -24,7 +24,10 @@ public class IntFunctionSumImpl extends AbstractIntFunction {
 
 	@Override
 	public void printCode() {
-		System.out.println(getReturns().getName() + " " + getReturnsName() + " = " + getParameterNames()[0] + " + " + getParameterNames()[1] + ";");
+		if (isReturnIsNewVar()) {
+			System.out.print(getReturns().getName() + " ");
+		}
+		System.out.println(getReturnsName() + " = " + getParameterNames()[0] + " + " + getParameterNames()[1] + ";");
 	}
 
 }

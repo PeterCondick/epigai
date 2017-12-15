@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 import au.com.epigai.generator.functions.AbstractIntFunction;
 import au.com.epigai.generator.functions.AbstractStatement;
 import au.com.epigai.generator.functions.FlowControl;
+import au.com.epigai.generator.functions.conditions.AbstractBooleanCondition;
+import au.com.epigai.generator.functions.flowimpls.FlowControlIf;
 import au.com.epigai.generator.functions.flowimpls.FlowControlReturn;
 
 public class MethodProxy implements InvocationHandler {
@@ -28,6 +30,8 @@ public class MethodProxy implements InvocationHandler {
 	private Method methodToImplement;
 	
 	private CodeBlock codeBlock;
+	
+	private Random random = new Random();
 	
 //	private List<AbstractStatement> statements;
 //	// this will contain variable values by variable name
@@ -43,6 +47,7 @@ public class MethodProxy implements InvocationHandler {
 		this.methodToImplement = methodToImplement;
 		this.codeBlock = codeBlock;
 		
+		// this is the top level code block and we are adding the method parameters to the variables for the code block
 		Parameter[] parameters = methodToImplement.getParameters();
 		Map<String, Set<String>> variables = Arrays.stream(parameters).collect(Collectors.toMap(parameter -> parameter.getType().getName(), 
 			parameter -> {
@@ -57,7 +62,8 @@ public class MethodProxy implements InvocationHandler {
 				vN1.addAll(vN2);
 				return vN1;
 			}));
-		this.codeBlock.setVariables(variables);
+		this.codeBlock.addToVariables(variables);
+		//this.codeBlock.setVariables(variables);
 		
 		String lastRetValName = "";
 		
@@ -72,69 +78,117 @@ public class MethodProxy implements InvocationHandler {
 			if (statement instanceof AbstractIntFunction) {
 				AbstractIntFunction intFunction = (AbstractIntFunction)statement;
 				
-				if (statement.getParameterNames() != null) {
-					// we are evolving - this function already has variable names from a previous run
-					// just read the return name from the function and write to variables and variableNames
-					Class returnType = intFunction.getReturns();
-					if (returnType != null) {
-						String retName = intFunction.getReturnsName();
-						if (retName == null) {
-							throw new RuntimeException("Function has parameter names set but not the return name");
-						}
-						lastRetValName = retName;
-						saveReturnVar(returnType, retName);
-					} // else do nothing - the function returns void
-				} else {
-					// this is a new function
-					// set the parameter names in the function
-					Optional<Class[]> paramsOpt = intFunction.getParameters();
-					Class[] params = null;
-					if (paramsOpt.isPresent()) {
-						params = paramsOpt.get();
-					}
-					if (params != null && params.length > 0) {
-						// TODO AHHHGGG - java 7
-						String[] parameterNames = new String[params.length];
-						for (int i = 0; i < params.length; i++) {
-							String paramTypeName = params[i].getName();
-							if (variables.containsKey(paramTypeName)) {
-								Set<String> thisTypeVarNames = variables.get(paramTypeName);
-								// TODO use Collections.toArray?
-								String[] ttvnArray = thisTypeVarNames.stream().toArray(String[]::new);
-								Random random = new Random();
-								int randomNumber = random.nextInt(ttvnArray.length);
-								parameterNames[i] = ttvnArray[randomNumber];
-							} else {
-								throw new RuntimeException("no parameters available of specified type");
-							}
-						}
-						statement.setParameterNames(parameterNames);
-					}
-					
-					// now deal with the return type
-					Class returnType = intFunction.getReturns();
-					if (returnType != null) {
-						// generate a name
-						String returnVarName = generateVarName();
-						boolean nameNotUnique = codeBlock.getVariableNames().contains(returnVarName);
-						while (nameNotUnique) {
-							returnVarName = generateVarName();
-							nameNotUnique = codeBlock.getVariableNames().contains(returnVarName);
-						}
-						// so here we have a unique var name
-						intFunction.setReturnsName(returnVarName);
-						
-						// then we have to add the new var to variables and variableNames
-						lastRetValName = returnVarName;
-						saveReturnVar(returnType, returnVarName);
-					}
-					
-				}
+				lastRetValName = varsForIntFunction(intFunction, codeBlock);
+				
+//				if (statement.getParameterNames() != null) {
+//					// we are evolving - this function already has variable names from a previous run
+//					// just read the return name from the function and write to variables and variableNames
+//					Class returnType = intFunction.getReturns();
+//					if (returnType != null) {
+//						String retName = intFunction.getReturnsName();
+//						if (retName == null) {
+//							throw new RuntimeException("Function has parameter names set but not the return name");
+//						}
+//						lastRetValName = retName;
+//						saveReturnVar(returnType, retName);
+//					} // else do nothing - the function returns void
+//				} else {
+//					// this is a new function
+//					// set the parameter names in the function
+//					Optional<Class[]> paramsOpt = intFunction.getParameters();
+//					Class[] params = null;
+//					if (paramsOpt.isPresent()) {
+//						params = paramsOpt.get();
+//					}
+//					if (params != null && params.length > 0) {
+//						// TODO AHHHGGG - java 7
+//						String[] parameterNames = new String[params.length];
+//						for (int i = 0; i < params.length; i++) {
+//							String paramTypeName = params[i].getName();
+//							if (variables.containsKey(paramTypeName)) {
+//								Set<String> thisTypeVarNames = variables.get(paramTypeName);
+//								// TODO use Collections.toArray?
+//								String[] ttvnArray = thisTypeVarNames.stream().toArray(String[]::new);
+//								int randomNumber = random.nextInt(ttvnArray.length);
+//								parameterNames[i] = ttvnArray[randomNumber];
+//							} else {
+//								throw new RuntimeException("no parameters available of specified type");
+//							}
+//						}
+//						statement.setParameterNames(parameterNames);
+//					}
+//					
+//					// now deal with the return type
+//					Class returnType = intFunction.getReturns();
+//					if (returnType != null) {
+//						// generate a name
+//						String returnVarName = generateVarName();
+//						boolean nameNotUnique = codeBlock.getVariableNames().contains(returnVarName);
+//						while (nameNotUnique) {
+//							returnVarName = generateVarName();
+//							nameNotUnique = codeBlock.getVariableNames().contains(returnVarName);
+//						}
+//						// so here we have a unique var name
+//						intFunction.setReturnsName(returnVarName);
+//						
+//						// then we have to add the new var to variables and variableNames
+//						lastRetValName = returnVarName;
+//						saveReturnVar(returnType, returnVarName);
+//					}
+//					
+//				}
 			} else if (statement instanceof FlowControl) {
 				if (statement instanceof FlowControlReturn) {
 					FlowControlReturn fcr = (FlowControlReturn)statement;
 					// set the param to be the last variable that was added
 					fcr.setParameterNames(new String[] {lastRetValName});
+				}
+				if (statement instanceof FlowControlIf) {
+					FlowControlIf fcIf = (FlowControlIf)statement;
+					
+					// pass parameters into the boolean condition
+					AbstractBooleanCondition ifBoolCond = fcIf.getBooleanCondition();
+					Optional<Class[]> ifbcParamTypes = ifBoolCond.getParameters();
+					if (ifbcParamTypes.isPresent()) {
+						// it accepts parameters - are they already set?
+						String[] ifbcParamNames = ifBoolCond.getParameterNames();
+						if (ifbcParamNames != null && ifbcParamNames.length > 0) {
+							// already set - no need to do anything for the condition
+						} else {
+							Class[] params = ifbcParamTypes.get();
+							String[] parameterNames = new String[params.length];
+							for (int i = 0; i < params.length; i++) {
+								String paramTypeName = params[i].getName();
+								if (variables.containsKey(paramTypeName)) {
+									Set<String> thisTypeVarNames = variables.get(paramTypeName);
+									// TODO use Collections.toArray?
+									String[] ttvnArray = thisTypeVarNames.stream().toArray(String[]::new);
+									int randomNumber = random.nextInt(ttvnArray.length);
+									parameterNames[i] = ttvnArray[randomNumber];
+								} else {
+									throw new RuntimeException("no parameters available of specified type");
+								}
+							}
+							ifBoolCond.setParameterNames(parameterNames);
+						}
+					}
+					
+					// work out the variables for the code block
+					CodeBlock ifCodeBlock = fcIf.getCodeBlock();
+					ifCodeBlock.addToVariables(codeBlock.getVariables());
+					ifCodeBlock.addToVariableNames(codeBlock.getVariableNames());
+					
+					for (AbstractStatement ifCBStatement : ifCodeBlock.getStatements()) {
+						// TODO this if statement is making the assumption that all functions have parameters
+						// at the moment they do but in the future they might not then this will need to change
+						if (ifCBStatement instanceof AbstractIntFunction) {
+							AbstractIntFunction ifIntFunction = (AbstractIntFunction)ifCBStatement;
+							
+							// TODO - need to implement this properly
+							String lastVarInIfCodeBlock = varsForIntFunction(ifIntFunction, ifCodeBlock);
+						}
+					}
+					
 				}
 				// TODO
 			} else {
@@ -142,6 +196,76 @@ public class MethodProxy implements InvocationHandler {
 			}
 		}
 	}
+	
+	private String varsForIntFunction(AbstractIntFunction intFunction, CodeBlock codeBlock) {
+		String returnValName = "";
+		
+		if (intFunction.getParameterNames() != null) {
+			// we are evolving - this function already has variable names from a previous run
+			// just read the return name from the function and write to variables and variableNames
+			Class returnType = intFunction.getReturns();
+			if (returnType != null) {
+				String retName = intFunction.getReturnsName();
+				if (retName == null) {
+					throw new RuntimeException("Function has parameter names set but not the return name");
+				}
+				returnValName = retName;
+				if (intFunction.isReturnIsNewVar()) {
+					saveReturnVar(returnType, retName);
+				}
+			} // else do nothing - the function returns void
+		} else {
+			// this is a new function
+			// set the parameter names in the function
+			Optional<Class[]> paramsOpt = intFunction.getParameters();
+			Class[] params = null;
+			if (paramsOpt.isPresent()) {
+				params = paramsOpt.get();
+			}
+			if (params != null && params.length > 0) {
+				// TODO AHHHGGG - java 7
+				String[] parameterNames = new String[params.length];
+				for (int i = 0; i < params.length; i++) {
+					String paramTypeName = params[i].getName();
+					if (codeBlock.getVariables().containsKey(paramTypeName)) {
+						Set<String> thisTypeVarNames = codeBlock.getVariables().get(paramTypeName);
+						// TODO use Collections.toArray?
+						String[] ttvnArray = thisTypeVarNames.stream().toArray(String[]::new);
+						int randomNumber = random.nextInt(ttvnArray.length);
+						parameterNames[i] = ttvnArray[randomNumber];
+					} else {
+						throw new RuntimeException("no parameters available of specified type");
+					}
+				}
+				intFunction.setParameterNames(parameterNames);
+			}
+			
+			// now deal with the return type
+			Class returnType = intFunction.getReturns();
+			if (returnType != null) {
+				
+				// TODO - decide if we are going to make the return a new variable or not
+				
+				// generate a name
+				String returnVarName = generateVarName();
+				boolean nameNotUnique = codeBlock.getVariableNames().contains(returnVarName);
+				while (nameNotUnique) {
+					returnVarName = generateVarName();
+					nameNotUnique = codeBlock.getVariableNames().contains(returnVarName);
+				}
+				// so here we have a unique var name
+				intFunction.setReturnsName(returnVarName);
+				
+				// then we have to add the new var to variables and variableNames
+				returnValName = returnVarName;
+				saveReturnVar(returnType, returnVarName);
+			}
+			
+		}
+		
+		return returnValName;
+	}
+	
 	
 	private String generateVarName() {
 		String varName = VAR_NAME_PREFIX + nameSequence;
@@ -175,7 +299,7 @@ public class MethodProxy implements InvocationHandler {
 			// populate variableValues with the passed in args
 			Parameter[] params = method.getParameters();
 			for (int i = 0; i < params.length; i++) {
-				codeBlock.addToVariableValues(params[i].getName(), args[i]);
+				codeBlock.addToVariableValues(params[i].getName(), args[i], true);
 			}
 			
 			Optional<Optional<Object>> retValOO = codeBlock.execute();

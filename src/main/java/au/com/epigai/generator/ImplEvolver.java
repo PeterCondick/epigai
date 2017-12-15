@@ -12,6 +12,10 @@ import java.util.Set;
 
 import au.com.epigai.generator.functions.AbstractIntFunction;
 import au.com.epigai.generator.functions.AbstractStatement;
+import au.com.epigai.generator.functions.conditions.AbstractBooleanCondition;
+import au.com.epigai.generator.functions.conditions.BooleanConditionIntEquals;
+import au.com.epigai.generator.functions.conditions.BooleanConditionTrue;
+import au.com.epigai.generator.functions.flowimpls.FlowControlIf;
 import au.com.epigai.generator.functions.flowimpls.FlowControlReturn;
 import au.com.epigai.generator.functions.intimpls.IntFunctionFirstFunction;
 import au.com.epigai.generator.functions.intimpls.IntFunctionMultiplyImpl;
@@ -27,9 +31,13 @@ public class ImplEvolver {
 	private static final Map<String, Class> availableFlowControls = new HashMap<String, Class>();
 	private static final List<String> flowControlKeys;
 	
+	private static final Map<String, Class> availableBooleanConditions = new HashMap<String, Class>();
+	private static final List<String> booleanConditionKeys;
+	
 	private static Random random = new Random();
 	
 	static {
+		// int functions
 		availableIntFunctions.put("F", IntFunctionFirstFunction.class);
 		availableIntFunctions.put("O", IntFunctionOneImpl.class);
 		availableIntFunctions.put("S", IntFunctionSumImpl.class);
@@ -38,16 +46,27 @@ public class ImplEvolver {
 		
 		intFunctionKeys = new ArrayList<String>(availableIntFunctions.keySet());
 		
+		// flow control
 		availableFlowControls.put("R", FlowControlReturn.class);
+		availableFlowControls.put("I", FlowControlIf.class);
 		
 		flowControlKeys = new ArrayList<String>(availableFlowControls.keySet());
+		
+		// boolean conditions
+		availableBooleanConditions.put("T", BooleanConditionTrue.class);
+		availableBooleanConditions.put("I", BooleanConditionIntEquals.class);
+		
+		booleanConditionKeys = new ArrayList<String>(availableBooleanConditions.keySet());
 	}
 	
-	public static CodeBlock evolveFrom(CodeBlock existingStatements) {
-		if (existingStatements != null && 
-				existingStatements.getStatements() != null && 
-				existingStatements.getStatements().size() > 0) {
-			return evolve(existingStatements);
+	public static CodeBlock evolveFrom(CodeBlock existingCodeBlock) {
+		// TODO - this current impl allows an implementation to only have a if statement - the method 
+		// impl then does not have a value to return so it defaults to returning 0
+		// should find a nice way to cope with that
+		if (existingCodeBlock != null && 
+				existingCodeBlock.getStatements() != null && 
+				existingCodeBlock.getStatements().size() > 0) {
+			return evolve(existingCodeBlock);
 		} else {
 			// random selection
 			System.out.println("ImplEvolver evolveFrom initialRandom");
@@ -61,7 +80,7 @@ public class ImplEvolver {
 		
 		List<AbstractStatement> functionsChosen = new ArrayList<AbstractStatement>();
 		
-		functionsChosen = addFunctions(functionsChosen, numberOfFunctions);
+		functionsChosen = addFunctions(functionsChosen, numberOfFunctions, true, null);
 		
 		// add a return statement
 		// TODO - do this properly once flow controls are implemented properly
@@ -78,7 +97,22 @@ public class ImplEvolver {
 		return codeBlock;
 	}
 	
+	private static CodeBlock initialNestedBlock() {
+		
+		int numberOfFunctions = numberOfNewFunctions();
+		
+		List<AbstractStatement> functionsChosen = new ArrayList<AbstractStatement>();
+		
+		functionsChosen = addFunctions(functionsChosen, numberOfFunctions, false, null);
+		
+		CodeBlock codeBlock = new CodeBlock();
+		codeBlock.setStatements(functionsChosen);
+		return codeBlock;
+	}
+	
 	private static CodeBlock evolve(CodeBlock codeBlock) {
+		CodeBlock newCodeBlock = new CodeBlock();
+		
 		// first of all - create a new list then copy the functions from existing to the new list
 		List<AbstractStatement> evolvedstatements = new ArrayList<AbstractStatement>();
 		evolvedstatements.addAll(codeBlock.getStatements());
@@ -102,7 +136,11 @@ public class ImplEvolver {
 		// now how many functions can we add
 		int numStmtsToAdd = numberToAddFunctions();
 		//System.out.println("going to add " + numFunctsToAdd + " while evolving");
-		evolvedstatements = addFunctions(evolvedstatements, numStmtsToAdd);
+		boolean allowFlows = false;
+		if (codeBlock.isTopLevelParent()) {
+			allowFlows = true;
+		}
+		evolvedstatements = addFunctions(evolvedstatements, numStmtsToAdd, allowFlows, newCodeBlock);
 		
 		// add a return statement
 		// TODO - do this properly once flow controls are implemented properly
@@ -114,7 +152,6 @@ public class ImplEvolver {
 			throw new RuntimeException("caught an exception", e);
 		}
 		
-		CodeBlock newCodeBlock = new CodeBlock();
 		newCodeBlock.setStatements(evolvedstatements);
 		return newCodeBlock;
 	}
@@ -124,20 +161,67 @@ public class ImplEvolver {
 		return 1 + random.nextInt(3);
 	}
 	
-	private static List<AbstractStatement> addFunctions(List<AbstractStatement> addTo, int numberToAdd) {
-		// TODO get it to add stuff other than int functions
+	private static List<AbstractStatement> addFunctions(List<AbstractStatement> addTo, int numberToAdd, boolean allowFlowControl, CodeBlock parentBlock) {
+		
+		// firstly what type of statement will the next statement be?
+		// only IntFunctions or FlowControl so far
+		
 		for (int i = 0; i < numberToAdd; i++) {
-			int randomNumber = random.nextInt(intFunctionKeys.size());
-			//System.out.println("randomNumber is " + randomNumber);
+			int whatTypeStmtsNum = 3;
+			if (allowFlowControl) {
+				whatTypeStmtsNum = 4;
+			}
+			int whatTypeStmtInt = random.nextInt(whatTypeStmtsNum);
 			
-			String key = intFunctionKeys.get(randomNumber);
-			try {
-				Constructor constructor = availableIntFunctions.get(key).getConstructor();
-				addTo.add((AbstractStatement)constructor.newInstance());
-				//addTo.add((AbstractIntFunction)availableIntFunctions.get(key).newInstance());
-			} catch (Exception e) {
-				// TODO - handle this more nicely
-				throw new RuntimeException("caught an exception", e);
+			if (whatTypeStmtInt < 3) {
+				//System.out.println(whatTypeStmtInt + " so adding an int function");
+				// add a int function
+				int randomNumber = random.nextInt(intFunctionKeys.size());
+				//System.out.println("randomNumber is " + randomNumber);
+				
+				String key = intFunctionKeys.get(randomNumber);
+				try {
+					Constructor constructor = availableIntFunctions.get(key).getConstructor();
+					addTo.add((AbstractStatement)constructor.newInstance());
+					//addTo.add((AbstractIntFunction)availableIntFunctions.get(key).newInstance());
+				} catch (Exception e) {
+					// TODO - handle this more nicely
+					throw new RuntimeException("caught an exception", e);
+				}
+			} else {
+				//System.out.println(whatTypeStmtInt + " so adding a flow control");
+				// add a flow control
+				// hard coding to a if flow control for now
+				String key = "I";
+				try {
+					Constructor fcConstructor = availableFlowControls.get(key).getConstructor();
+					FlowControlIf fcIf = (FlowControlIf)fcConstructor.newInstance();
+					
+					// add the boolean condition
+					int randomNumberBoolCond = random.nextInt(booleanConditionKeys.size());
+					
+					String bcKey = booleanConditionKeys.get(randomNumberBoolCond);
+					try {
+						Constructor bcConstructor = availableBooleanConditions.get(bcKey).getConstructor();
+						fcIf.setBooleanCondition((AbstractBooleanCondition)bcConstructor.newInstance());
+						
+					} catch (Exception e) {
+						// TODO - handle this more nicely
+						throw new RuntimeException("caught an exception", e);
+					}
+					
+					// add the codeBlock
+					CodeBlock ifBlock = initialNestedBlock();
+					ifBlock.setParentBlock(parentBlock);
+					fcIf.setCodeBlock(ifBlock);
+					
+					addTo.add(fcIf);
+				} catch (Exception e) {
+					// TODO - handle this more nicely
+					throw new RuntimeException("caught an exception", e);
+				}
+				
+				
 			}
 		}
 		return addTo;

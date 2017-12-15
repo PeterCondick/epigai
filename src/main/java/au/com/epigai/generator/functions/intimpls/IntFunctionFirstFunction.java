@@ -24,8 +24,10 @@ public class IntFunctionFirstFunction extends AbstractIntFunction {
 
 	@Override
 	public void printCode() {
-		//System.out.println(firstName + ";");
-		System.out.println(getReturns().getName() + " " + getReturnsName() + " = " + getParameterNames()[0] + ";");
+		if (isReturnIsNewVar()) {
+			System.out.print(getReturns().getName() + " ");
+		}
+		System.out.println(getReturnsName() + " = " + getParameterNames()[0] + ";");
 	}
 
 }

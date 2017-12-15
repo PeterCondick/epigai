@@ -19,6 +19,4 @@ public class BooleanConditionTrue extends AbstractBooleanCondition {
 		return Optional.empty();
 	}
 
-	
-	
 }

@@ -24,7 +24,10 @@ public class IntFunctionZeroImpl extends AbstractIntFunction {
 
 	@Override
 	public void printCode() {
-		System.out.println(getReturns().getName() + " " + getReturnsName() + " = 0;");
+		if (isReturnIsNewVar()) {
+			System.out.print(getReturns().getName() + " ");
+		}
+		System.out.println(getReturnsName() + " = 0;");
 	}
 
 }
