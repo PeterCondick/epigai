@@ -9,6 +9,7 @@ public class FlowControlReturn extends AbstractStatement implements FlowControl 
 	
 	@Override
 	public void printCode() {
+		System.out.print(getIndent());
 		System.out.println("return " + getParameterNames()[0] + ";");
 	}
 

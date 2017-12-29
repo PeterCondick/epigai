@@ -4,7 +4,7 @@ import java.util.Optional;
 
 import au.com.epigai.generator.functions.AbstractIntFunction;
 
-public class IntFunctionOneImpl extends AbstractIntFunction {
+public class IntFunctionDivideImpl extends AbstractIntFunction {
 
 	@Override
 	public Class getReturns() {
@@ -19,7 +19,7 @@ public class IntFunctionOneImpl extends AbstractIntFunction {
 	
 	@Override
 	public int function(int first, int second) {
-		return 1;
+		return first / second;
 	}
 
 	@Override
@@ -28,7 +28,7 @@ public class IntFunctionOneImpl extends AbstractIntFunction {
 		if (isReturnIsNewVar()) {
 			System.out.print(getReturns().getName() + " ");
 		}
-		System.out.println(getReturnsName() + " = 1;");
+		System.out.println(getReturnsName() + " = " + getParameterNames()[0] + " / " + getParameterNames()[1] + ";");
 	}
 
 }

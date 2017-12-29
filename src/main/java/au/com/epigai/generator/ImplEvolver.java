@@ -14,9 +14,11 @@ import au.com.epigai.generator.functions.AbstractIntFunction;
 import au.com.epigai.generator.functions.AbstractStatement;
 import au.com.epigai.generator.functions.conditions.AbstractBooleanCondition;
 import au.com.epigai.generator.functions.conditions.BooleanConditionIntEquals;
+import au.com.epigai.generator.functions.conditions.BooleanConditionIntGreaterThan;
 import au.com.epigai.generator.functions.conditions.BooleanConditionTrue;
 import au.com.epigai.generator.functions.flowimpls.FlowControlIf;
 import au.com.epigai.generator.functions.flowimpls.FlowControlReturn;
+import au.com.epigai.generator.functions.intimpls.IntFunctionDivideImpl;
 import au.com.epigai.generator.functions.intimpls.IntFunctionFirstFunction;
 import au.com.epigai.generator.functions.intimpls.IntFunctionMultiplyImpl;
 import au.com.epigai.generator.functions.intimpls.IntFunctionOneImpl;
@@ -43,6 +45,7 @@ public class ImplEvolver {
 		availableIntFunctions.put("S", IntFunctionSumImpl.class);
 		availableIntFunctions.put("M", IntFunctionMultiplyImpl.class);
 		availableIntFunctions.put("Z", IntFunctionZeroImpl.class);
+		availableIntFunctions.put("D", IntFunctionDivideImpl.class);
 		
 		intFunctionKeys = new ArrayList<String>(availableIntFunctions.keySet());
 		
@@ -53,8 +56,9 @@ public class ImplEvolver {
 		flowControlKeys = new ArrayList<String>(availableFlowControls.keySet());
 		
 		// boolean conditions
-		availableBooleanConditions.put("T", BooleanConditionTrue.class);
+		//availableBooleanConditions.put("T", BooleanConditionTrue.class);
 		availableBooleanConditions.put("I", BooleanConditionIntEquals.class);
+		availableBooleanConditions.put("G", BooleanConditionIntGreaterThan.class);
 		
 		booleanConditionKeys = new ArrayList<String>(availableBooleanConditions.keySet());
 	}

@@ -62,7 +62,7 @@ public class MethodProxy implements InvocationHandler {
 				vN1.addAll(vN2);
 				return vN1;
 			}));
-		this.codeBlock.addToVariables(variables);
+		this.codeBlock.addToVariables(variables, true);
 		//this.codeBlock.setVariables(variables);
 		
 		String lastRetValName = "";
@@ -73,6 +73,8 @@ public class MethodProxy implements InvocationHandler {
 		// set the names of the variables called with 
 		// this needs to be a for loop not a stream because we want to modify the nameSequence var inside the loop
 		for (AbstractStatement statement : codeBlock.getStatements()) {
+			statement.setIndent(codeBlock.getIndent());
+			
 			// TODO this if statement is making the assumption that all functions have parameters
 			// at the moment they do but in the future they might not then this will need to change
 			if (statement instanceof AbstractIntFunction) {
@@ -80,63 +82,6 @@ public class MethodProxy implements InvocationHandler {
 				
 				lastRetValName = varsForIntFunction(intFunction, codeBlock);
 				
-//				if (statement.getParameterNames() != null) {
-//					// we are evolving - this function already has variable names from a previous run
-//					// just read the return name from the function and write to variables and variableNames
-//					Class returnType = intFunction.getReturns();
-//					if (returnType != null) {
-//						String retName = intFunction.getReturnsName();
-//						if (retName == null) {
-//							throw new RuntimeException("Function has parameter names set but not the return name");
-//						}
-//						lastRetValName = retName;
-//						saveReturnVar(returnType, retName);
-//					} // else do nothing - the function returns void
-//				} else {
-//					// this is a new function
-//					// set the parameter names in the function
-//					Optional<Class[]> paramsOpt = intFunction.getParameters();
-//					Class[] params = null;
-//					if (paramsOpt.isPresent()) {
-//						params = paramsOpt.get();
-//					}
-//					if (params != null && params.length > 0) {
-//						// TODO AHHHGGG - java 7
-//						String[] parameterNames = new String[params.length];
-//						for (int i = 0; i < params.length; i++) {
-//							String paramTypeName = params[i].getName();
-//							if (variables.containsKey(paramTypeName)) {
-//								Set<String> thisTypeVarNames = variables.get(paramTypeName);
-//								// TODO use Collections.toArray?
-//								String[] ttvnArray = thisTypeVarNames.stream().toArray(String[]::new);
-//								int randomNumber = random.nextInt(ttvnArray.length);
-//								parameterNames[i] = ttvnArray[randomNumber];
-//							} else {
-//								throw new RuntimeException("no parameters available of specified type");
-//							}
-//						}
-//						statement.setParameterNames(parameterNames);
-//					}
-//					
-//					// now deal with the return type
-//					Class returnType = intFunction.getReturns();
-//					if (returnType != null) {
-//						// generate a name
-//						String returnVarName = generateVarName();
-//						boolean nameNotUnique = codeBlock.getVariableNames().contains(returnVarName);
-//						while (nameNotUnique) {
-//							returnVarName = generateVarName();
-//							nameNotUnique = codeBlock.getVariableNames().contains(returnVarName);
-//						}
-//						// so here we have a unique var name
-//						intFunction.setReturnsName(returnVarName);
-//						
-//						// then we have to add the new var to variables and variableNames
-//						lastRetValName = returnVarName;
-//						saveReturnVar(returnType, returnVarName);
-//					}
-//					
-//				}
 			} else if (statement instanceof FlowControl) {
 				if (statement instanceof FlowControlReturn) {
 					FlowControlReturn fcr = (FlowControlReturn)statement;
@@ -175,10 +120,12 @@ public class MethodProxy implements InvocationHandler {
 					
 					// work out the variables for the code block
 					CodeBlock ifCodeBlock = fcIf.getCodeBlock();
-					ifCodeBlock.addToVariables(codeBlock.getVariables());
-					ifCodeBlock.addToVariableNames(codeBlock.getVariableNames());
+					ifCodeBlock.copyVariables(codeBlock);
+//					ifCodeBlock.addToVariables(codeBlock.getVariables());
+//					ifCodeBlock.addToVariableNames(codeBlock.getVariableNames());
 					
 					for (AbstractStatement ifCBStatement : ifCodeBlock.getStatements()) {
+						ifCBStatement.setIndent(ifCodeBlock.getIndent());
 						// TODO this if statement is making the assumption that all functions have parameters
 						// at the moment they do but in the future they might not then this will need to change
 						if (ifCBStatement instanceof AbstractIntFunction) {
@@ -227,12 +174,14 @@ public class MethodProxy implements InvocationHandler {
 				String[] parameterNames = new String[params.length];
 				for (int i = 0; i < params.length; i++) {
 					String paramTypeName = params[i].getName();
-					if (codeBlock.getVariables().containsKey(paramTypeName)) {
-						Set<String> thisTypeVarNames = codeBlock.getVariables().get(paramTypeName);
-						// TODO use Collections.toArray?
-						String[] ttvnArray = thisTypeVarNames.stream().toArray(String[]::new);
-						int randomNumber = random.nextInt(ttvnArray.length);
-						parameterNames[i] = ttvnArray[randomNumber];
+					//if (codeBlock.getVariables().containsKey(paramTypeName)) {
+					if (codeBlock.isDoesVariableOfTypeExist(paramTypeName, true)) {
+						parameterNames[i] = getRandomExistingVariableOfType(codeBlock, paramTypeName, true);
+//						Set<String> thisTypeVarNames = codeBlock.getVariables().get(paramTypeName);
+//						// TODO use Collections.toArray?
+//						String[] ttvnArray = thisTypeVarNames.stream().toArray(String[]::new);
+//						int randomNumber = random.nextInt(ttvnArray.length);
+//						parameterNames[i] = ttvnArray[randomNumber];
 					} else {
 						throw new RuntimeException("no parameters available of specified type");
 					}
@@ -245,20 +194,34 @@ public class MethodProxy implements InvocationHandler {
 			if (returnType != null) {
 				
 				// TODO - decide if we are going to make the return a new variable or not
-				
-				// generate a name
-				String returnVarName = generateVarName();
-				boolean nameNotUnique = codeBlock.getVariableNames().contains(returnVarName);
-				while (nameNotUnique) {
-					returnVarName = generateVarName();
-					nameNotUnique = codeBlock.getVariableNames().contains(returnVarName);
+				// need to check if there is a variable of the appropriate type first
+				int retNewVarOrNot = random.nextInt(2);
+				if (retNewVarOrNot == 0 && codeBlock.isDoesVariableOfTypeExist(returnType.getName(), false)) {
+					// update an existing variable
+					intFunction.setReturnIsNewVar(false);
+					// get one of the existing variables
+					String retVarName = getRandomExistingVariableOfType(codeBlock, returnType.getName(), false);
+					// set that to the return name
+					intFunction.setReturnsName(retVarName);
+					returnValName = retVarName;
+				} else {
+					// declare a new variable
+					// default is true but just being cautious
+					intFunction.setReturnIsNewVar(true);
+					// generate a name
+					String returnVarName = generateVarName();
+					boolean nameNotUnique = codeBlock.getVariableNames().contains(returnVarName);
+					while (nameNotUnique) {
+						returnVarName = generateVarName();
+						nameNotUnique = codeBlock.getVariableNames().contains(returnVarName);
+					}
+					// so here we have a unique var name
+					intFunction.setReturnsName(returnVarName);
+					
+					// then we have to add the new var to variables and variableNames
+					returnValName = returnVarName;
+					saveReturnVar(returnType, returnVarName);
 				}
-				// so here we have a unique var name
-				intFunction.setReturnsName(returnVarName);
-				
-				// then we have to add the new var to variables and variableNames
-				returnValName = returnVarName;
-				saveReturnVar(returnType, returnVarName);
 			}
 			
 		}
@@ -266,6 +229,18 @@ public class MethodProxy implements InvocationHandler {
 		return returnValName;
 	}
 	
+	private String getRandomExistingVariableOfType(CodeBlock codeBlock, String paramTypeName, boolean includeArgs) {
+		Set<String> thisTypeVarNames = null;
+		if (includeArgs) {
+			thisTypeVarNames = codeBlock.getVariables().get(paramTypeName);
+		} else {
+			thisTypeVarNames = codeBlock.getVariablesNoArgs().get(paramTypeName);
+		}
+		// TODO use Collections.toArray?
+		String[] ttvnArray = thisTypeVarNames.stream().toArray(String[]::new);
+		int randomNumber = random.nextInt(ttvnArray.length);
+		return ttvnArray[randomNumber];
+	}
 	
 	private String generateVarName() {
 		String varName = VAR_NAME_PREFIX + nameSequence;
@@ -277,15 +252,15 @@ public class MethodProxy implements InvocationHandler {
 		// variable names
 		codeBlock.addToVariableNames(returnVarName);
 		// variables
-		if (codeBlock.getVariables().containsKey(returnType.getName())) {
-			// update
-			codeBlock.getVariables().get(returnType.getName()).add(returnVarName);
-		} else {
+//		if (codeBlock.getVariables().containsKey(returnType.getName())) {
+//			// update
+//			codeBlock.getVariables().get(returnType.getName()).add(returnVarName);
+//		} else {
 			// add it
-			Set<String> varNames = Collections.synchronizedSet(new HashSet<String>());
-			varNames.add(returnVarName);
-			codeBlock.addToVariables(returnType.getName(), varNames);
-		}
+		Set<String> varNames = Collections.synchronizedSet(new HashSet<String>());
+		varNames.add(returnVarName);
+		codeBlock.addToVariables(returnType.getName(), varNames, false);
+//		}
 	}
 	
 	@Override

@@ -16,10 +16,12 @@ public class FlowControlIf extends AbstractStatement implements FlowControl {
 
 	@Override
 	public void printCode() {
+		System.out.print(getIndent());
 		System.out.print("if (");
 		booleanCondition.printCode();
 		System.out.println(") {");
 		codeBlock.printCode();
+		System.out.print(getIndent());
 		System.out.println("}");
 	}
 
@@ -58,7 +60,14 @@ public class FlowControlIf extends AbstractStatement implements FlowControl {
 		}
 	}
 	
-	
+	@Override
+	public String[] getParameterNames() {
+		if (booleanCondition == null) {
+			throw new RuntimeException("need to set the boolean condition first");
+		} else {
+			return booleanCondition.getParameterNames();
+		}
+	}
 	
 	
 }

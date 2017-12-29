@@ -24,6 +24,7 @@ public class IntFunctionSumImpl extends AbstractIntFunction {
 
 	@Override
 	public void printCode() {
+		System.out.print(getIndent());
 		if (isReturnIsNewVar()) {
 			System.out.print(getReturns().getName() + " ");
 		}
