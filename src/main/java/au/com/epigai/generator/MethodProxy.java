@@ -85,8 +85,14 @@ public class MethodProxy implements InvocationHandler {
 			} else if (statement instanceof FlowControl) {
 				if (statement instanceof FlowControlReturn) {
 					FlowControlReturn fcr = (FlowControlReturn)statement;
-					// set the param to be the last variable that was added
-					fcr.setParameterNames(new String[] {lastRetValName});
+					// set the param to be a random declared variable of the return type
+					String retTypeName = this.methodToImplement.getReturnType().getName();
+					if (!this.codeBlock.isDoesVariableOfTypeExist(retTypeName, false)) {
+						throw new RuntimeException("handling a return statement but no variable declaired of type " + retTypeName);
+					}
+					String retVarName = getRandomExistingVariableOfType(this.codeBlock, retTypeName, false);
+					fcr.setParameterNames(new String[] {retVarName});
+					//fcr.setParameterNames(new String[] {lastRetValName});
 				}
 				if (statement instanceof FlowControlIf) {
 					FlowControlIf fcIf = (FlowControlIf)statement;

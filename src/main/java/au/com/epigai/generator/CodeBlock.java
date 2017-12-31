@@ -12,6 +12,7 @@ import au.com.epigai.generator.functions.AbstractIntFunction;
 import au.com.epigai.generator.functions.AbstractStatement;
 import au.com.epigai.generator.functions.FlowControl;
 import au.com.epigai.generator.functions.flowimpls.FlowControlIf;
+import au.com.epigai.generator.functions.flowimpls.FlowControlReturn;
 
 public class CodeBlock implements PrintableCode {
 
@@ -29,7 +30,7 @@ public class CodeBlock implements PrintableCode {
 	private CodeBlock parentBlock;
 	//private boolean updatedUpperLevelVariable = false;
 	//private String lastUpperLevelVariableUpdated = null;
-	private String lastUpdatedVariable;
+	//private String lastUpdatedVariable;
 	
 	public List<AbstractStatement> getStatements() {
 		return statements;
@@ -45,13 +46,13 @@ public class CodeBlock implements PrintableCode {
 		if (newVariable) {
 			// something is creating a new variable
 			variableValues.put(key, value);
-			lastUpdatedVariable = key;
+			//lastUpdatedVariable = key;
 		} else {
 			// the value of an existing variable is being updated
 			if (variableValues.containsKey(key)) {
 				// the variable was created in this block
 				variableValues.put(key, value);
-				lastUpdatedVariable = key;
+				//lastUpdatedVariable = key;
 			} else {
 				if (isTopLevelParent()) {
 					throw new RuntimeException("can not find variable " + key);
@@ -219,19 +220,6 @@ public class CodeBlock implements PrintableCode {
 				// store the returned value in variableValues with the returned name
 				addToVariableValues(intFunction.getReturnsName(), retVal, intFunction.isReturnIsNewVar());
 				//System.out.println("in code block execute variable " + intFunction.getReturnsName() + " set to " + retVal);
-				//lastReturnedVal = retVal;
-				//System.out.println("processing an int func");
-//				if (!isTopLevelParent()) {
-//					System.out.println("processing an int func not in a top level code block");
-//				}
-//				if (!isTopLevelParent() && 
-//						!intFunction.isReturnIsNewVar() &&
-//						!variableValues.containsKey(intFunction.getReturnsName())) {
-//					// it's setting a var that is at a upper level
-//					updatedUpperLevelVariable = true;
-//					lastUpperLevelVariableUpdated = intFunction.getReturnsName();
-//					System.out.println("in a nested codeblock - setting upper updated var to " + intFunction.getReturnsName());
-//				}
 			} else if (statement instanceof FlowControl) {
 				if (statement instanceof FlowControlIf) {
 					FlowControlIf fcIf = (FlowControlIf)statement;
@@ -252,6 +240,13 @@ public class CodeBlock implements PrintableCode {
 //							System.out.println("the if statement set the value of " + fcIf.getCodeBlock().getLastUpperLevelVariableUpdated() + " to " + lastReturnedVal);
 //						}
 //					}
+				} else if (statement instanceof FlowControlReturn) {
+					FlowControlReturn fcR = (FlowControlReturn)statement;
+					String retVarName = fcR.getReturnVariableName();
+					Object retVal = variableValues.get(retVarName);
+					// TODO currently working because everything returns ints
+					Optional<Object> retOptional = Optional.of((Integer)retVal);
+					return Optional.of(retOptional);
 				} else {
 					// TODO
 				}
@@ -262,12 +257,13 @@ public class CodeBlock implements PrintableCode {
 		
 		// TODO - this is assuming the last variable is returned
 		// TODO and this is assuming its just ints
-		if (isTopLevelParent() && lastUpdatedVariable != null) {
-			Optional<Object> retOptional = Optional.of((Integer)variableValues.get(lastUpdatedVariable));
-			return Optional.of(retOptional);
-		} else {
-			return Optional.empty();
-		}
+//		if (isTopLevelParent() && lastUpdatedVariable != null) {
+//			Optional<Object> retOptional = Optional.of((Integer)variableValues.get(lastUpdatedVariable));
+//			return Optional.of(retOptional);
+//		} else {
+//			return Optional.empty();
+//		}
+		return Optional.empty();
 	}
 	
 	public String getIndent() {

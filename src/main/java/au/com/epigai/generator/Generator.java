@@ -42,9 +42,9 @@ public class Generator {
 			
 			boolean solutionFound = false;
 			// need to come up with a few random implementations of it
-			CodeBlock codeBlockA = ImplEvolver.evolveFrom(null);
-			CodeBlock codeBlockB = ImplEvolver.evolveFrom(null);
-			CodeBlock codeBlockC = ImplEvolver.evolveFrom(null);
+			CodeBlock codeBlockA = ImplEvolver.evolveFrom(null, methodToImplement.getReturnType().getName());
+			CodeBlock codeBlockB = ImplEvolver.evolveFrom(null, methodToImplement.getReturnType().getName());
+			CodeBlock codeBlockC = ImplEvolver.evolveFrom(null, methodToImplement.getReturnType().getName());
 			
 			List<CodeBlock> impls = new ArrayList<CodeBlock>();
 			
@@ -100,26 +100,26 @@ public class Generator {
 						if (currentBest != null && currentBest.getTestResults().getPassed() > testResults.getPassed()) {
 							// evolve from the previous impl (current best)
 							System.out.println("##### Sticking with the previous solution #####");
-							evolve(impls, currentBest);
+							evolve(impls, currentBest, methodToImplement.getReturnType().getName());
 						} else if (currentBest != null && currentBest.getTestResults().getPassed() == testResults.getPassed()) {
 							// found an equivalent solution
 							// evolve from the one with the least lines - or the new one if they are the same
 							if (currentBest.getCodeBlock().getStatements().size() < rafwOpt.get().getCodeBlock().getStatements().size()) {
 								// stay with current best
 								System.out.println("##### Sticking with the previous solution - less lines#####");
-								evolve(impls, currentBest);
+								evolve(impls, currentBest, methodToImplement.getReturnType().getName());
 							} else {
 								// evolve from the new impl
 								System.out.println("####### New results are the new best solution - less or equal lines#########");
 								currentBest = rafwOpt.get();
-								evolve(impls, rafwOpt.get());
+								evolve(impls, rafwOpt.get(), methodToImplement.getReturnType().getName());
 							}
 						} else {
 							// found a new better solution
 							// evolve from the new impl
 							System.out.println("####### New results are the new best solution #########");
 							currentBest = rafwOpt.get();
-							evolve(impls, rafwOpt.get());
+							evolve(impls, rafwOpt.get(), methodToImplement.getReturnType().getName());
 						}
 					} else {
 						solutionFound = true;
@@ -179,14 +179,14 @@ public class Generator {
 		return resultsAndFunctions;
 	}
 	
-	private static List<CodeBlock> evolve(List<CodeBlock> impls, ResultsAndFunctionsWrapper evolveFrom) {
+	private static List<CodeBlock> evolve(List<CodeBlock> impls, ResultsAndFunctionsWrapper evolveFrom, String returnTypeName) {
 		
 		impls.clear();
-		CodeBlock codeBlockNewA = ImplEvolver.evolveFrom(evolveFrom.getCodeBlock());
-		CodeBlock codeBlockNewB = ImplEvolver.evolveFrom(evolveFrom.getCodeBlock());
-		CodeBlock codeBlockNewC = ImplEvolver.evolveFrom(evolveFrom.getCodeBlock());
+		CodeBlock codeBlockNewA = ImplEvolver.evolveFrom(evolveFrom.getCodeBlock(), returnTypeName);
+		CodeBlock codeBlockNewB = ImplEvolver.evolveFrom(evolveFrom.getCodeBlock(), returnTypeName);
+		CodeBlock codeBlockNewC = ImplEvolver.evolveFrom(evolveFrom.getCodeBlock(), returnTypeName);
 		// and bung in a new from scratch impl just in case it's gone the wrong way
-		CodeBlock codeBlockNewD = ImplEvolver.evolveFrom(null);
+		CodeBlock codeBlockNewD = ImplEvolver.evolveFrom(null, returnTypeName);
 		
 		impls.add(codeBlockNewA);
 		impls.add(codeBlockNewB);
