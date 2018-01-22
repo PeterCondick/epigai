@@ -69,7 +69,7 @@ public class ImplEvolver {
 		// should find a nice way to cope with that
 		if (existingCodeBlock != null && 
 				existingCodeBlock.getStatements() != null && 
-				existingCodeBlock.getStatements().size() > 0) {
+				existingCodeBlock.getLineCount() > 0) {
 			return evolve(existingCodeBlock, returnType);
 		} else {
 			// random selection

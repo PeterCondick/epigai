@@ -1,5 +1,7 @@
 package au.com.epigai.generator;
 
+import static org.junit.Assume.assumeNoException;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -140,15 +142,7 @@ public class CodeBlock implements PrintableCode {
 	public Map<String, Set<String>> getVariablesNoArgs() {
 		return variablesNoArgs;
 	}
-//	public void addToVariablesNoArgs(Map<String, Set<String>> newVariables) {
-//		variablesNoArgs.putAll(newVariables);
-//	}
-//	public void addToVariablesNoArgs(String key, Set<String> varNames) {
-//		if (variablesNoArgs == null) {
-//			throw new RuntimeException("variables is null");
-//		}
-//		variablesNoArgs.put(key, varNames);
-//	}
+
 	public boolean isDoesVariableOfTypeExist(String typeName, boolean includeArgs) {
 		Set<String> varsForType = null;
 		if (includeArgs) {
@@ -183,12 +177,27 @@ public class CodeBlock implements PrintableCode {
 		}
 	}
 	
-//	public boolean isUpdatedUpperLevelVariable() {
-//		return updatedUpperLevelVariable;
-//	}
-//	public String getLastUpperLevelVariableUpdated() {
-//		return lastUpperLevelVariableUpdated;
-//	}
+	public int getLineCount() {
+		int lines = 0;
+		if (statements != null) {
+			
+			lines = statements.stream().mapToInt(statement -> {
+				if (statement instanceof FlowControlIf) {
+					FlowControlIf fcIf = (FlowControlIf)statement;
+					int ifCount = 2;
+					int ifBlockCount = 0;
+					if (fcIf.getCodeBlock() != null) {
+						ifBlockCount = fcIf.getCodeBlock().getLineCount();
+					}
+					return ifBlockCount + ifCount;
+				} else {
+					return 1;
+				}
+			}).sum();
+			
+		}
+		return lines;
+	}
 	
 	@Override
 	public void printCode() {

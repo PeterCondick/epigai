@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Scanner;
 import java.util.stream.Collectors;
 
 import org.junit.runner.JUnitCore;
@@ -17,6 +18,8 @@ import au.com.epigai.generator.functions.AbstractIntFunction;
 import au.com.epigai.generator.functions.AbstractStatement;
 
 public class Generator {
+	
+	private static final int DEFAULT_MINIMISE_PER_CYCLE = 100;
 	
 	public static void generate(Class interfaceToImplement, Method methodToImplement, SpecUnitTest... unitTestInstances) {	
 		
@@ -36,11 +39,17 @@ public class Generator {
 			Class returnType = methodToImplement.getReturnType();
 			System.out.println("Return Type is " + returnType.getName() + " canonical " + returnType.getCanonicalName());
 			
+			// to read command line input
+			Scanner scanner = new Scanner(System.in);
+			
 			Parameter[] parameters = methodToImplement.getParameters();
 			Arrays.stream(parameters).forEach(parameter -> System.out.println("parameter type " + parameter.getType().getName() + " and name " + parameter.getName()));
 			
 			
 			boolean solutionFound = false;
+			boolean minimising = false;
+			int minimisingCycles = 0;
+			
 			// need to come up with a few random implementations of it
 			CodeBlock codeBlockA = ImplEvolver.evolveFrom(null, methodToImplement.getReturnType().getName());
 			CodeBlock codeBlockB = ImplEvolver.evolveFrom(null, methodToImplement.getReturnType().getName());
@@ -58,7 +67,7 @@ public class Generator {
 		
 			ResultsAndFunctionsWrapper currentBest = null;
 			
-			while (!solutionFound) {
+			while (!solutionFound || minimising) {
 				
 				// TODO - why do parallel streams not work?
 				// maybe something to do with this being static?
@@ -72,7 +81,7 @@ public class Generator {
 							return 1;
 						} else if (rafw1.getTestResults().getPassed() == rafw2.getTestResults().getPassed()) {
 							// return the one with the fewest lines
-							if (rafw1.getCodeBlock().getStatements().size() < rafw2.getCodeBlock().getStatements().size()) {
+							if (rafw1.getCodeBlock().getLineCount() < rafw2.getCodeBlock().getLineCount()) {
 								return 1;
 							} else {
 								return -1;
@@ -87,11 +96,17 @@ public class Generator {
 					
 					TestResults testResults = rafwOpt.get().getTestResults();
 					
-					if (testResults.getFailed() > 0) {
-						System.out.println("##### New results ##### passed " + testResults.getPassed() + " failed " + testResults.getFailed());
+					if (!solutionFound && testResults.getFailed() > 0) {
+						// should not get in here when minimising
+						System.out.println("##### New results ##### passed " + testResults.getPassed() + 
+												" failed " + testResults.getFailed() + " lines " +
+												rafwOpt.get().getCodeBlock().getLineCount());
 						rafwOpt.get().getCodeBlock().printCode();
 						if (currentBest != null) {
-							System.out.println("##### Current best solution ##### passed " + currentBest.getTestResults().getPassed() + " failed " + currentBest.getTestResults().getFailed());
+							System.out.println("##### Current best solution ##### passed " + 
+												currentBest.getTestResults().getPassed() + 
+												" failed " + currentBest.getTestResults().getFailed() + 
+												" lines " + currentBest.getCodeBlock().getLineCount());
 							currentBest.getCodeBlock().printCode();
 						} else {
 							System.out.println("##### No current solution #####");
@@ -104,7 +119,7 @@ public class Generator {
 						} else if (currentBest != null && currentBest.getTestResults().getPassed() == testResults.getPassed()) {
 							// found an equivalent solution
 							// evolve from the one with the least lines - or the new one if they are the same
-							if (currentBest.getCodeBlock().getStatements().size() < rafwOpt.get().getCodeBlock().getStatements().size()) {
+							if (currentBest.getCodeBlock().getLineCount() < rafwOpt.get().getCodeBlock().getLineCount()) {
 								// stay with current best
 								System.out.println("##### Sticking with the previous solution - less lines#####");
 								evolve(impls, currentBest, methodToImplement.getReturnType().getName());
@@ -122,14 +137,74 @@ public class Generator {
 							evolve(impls, rafwOpt.get(), methodToImplement.getReturnType().getName());
 						}
 					} else {
-						solutionFound = true;
-						System.out.println("####### Found a solution #########");
-						rafwOpt.get().getCodeBlock().printCode();
-						// TODO - the returns statement
+						// TODO - addToMax sometimes coming up with invalid solutions if an ifIntEquals is involved
+												
+						// if in here we have either just found a solution or we found a solution earlier and are now trying to minimise the number of lines
+						if (!solutionFound) {
+							solutionFound = true;
+							currentBest = rafwOpt.get();
+							System.out.println("####### Found a solution #########");
+							currentBest.getCodeBlock().printCode();
+						}
+						
+						if (minimising) {
+							System.out.println("###### Current solution - passes all tests ##### - lines " + currentBest.getCodeBlock().getLineCount());
+							currentBest.getCodeBlock().printCode();
+							if (testResults.getFailed() == 0) {
+								System.out.println("###### New Solution - also passes all tests #####");
+								rafwOpt.get().getCodeBlock().printCode();
+							} else {
+								System.out.println("###### New Solution does not pass all tests #####");
+							}
+							
+							// so if we are here then both the current best and the new one passed all tests and we are minimising
+							if (testResults.getFailed() > 0) {
+								// new impl didn't pass all tests - stay with current best
+								System.out.println("##### Sticking with the previous solution as the new solution didn't pass #####");
+							} else if (currentBest != null && 
+									currentBest.getCodeBlock().getLineCount() < rafwOpt.get().getCodeBlock().getLineCount()) {
+								// it is possible that it found a solution on the first attempt so we need the currentBest != null check
+								// stay with current best
+								System.out.println("##### Sticking with the previous solution - less lines#####");
+							} else {
+								// evolve from the new impl
+								System.out.println("####### New results are the new best solution - less or equal lines#########");
+								currentBest = rafwOpt.get();
+							}
+						}
+						
+						if (minimising && minimisingCycles > DEFAULT_MINIMISE_PER_CYCLE) {
+							minimising = false;
+						}
+						
+						if (!minimising) {
+							// do we continue and minimiseLines?
+							System.out.println("Do you want to try to minimise the lines for another " + DEFAULT_MINIMISE_PER_CYCLE + " cycles - y or n?");
+							String minStr = scanner.next();
+							if ("y".equalsIgnoreCase(minStr) || "yes".equalsIgnoreCase(minStr)) {
+								System.out.println("Going to try to minimise lines for another " + DEFAULT_MINIMISE_PER_CYCLE + " cycles");
+								minimising = true;
+								minimisingCycles = 0;
+							} else {
+								minimising = false;
+								System.out.println("###### Stopping. The best solution found was #####");
+								currentBest.getCodeBlock().printCode();
+							}
+						}
+						
+						if (minimising) {
+							evolve(impls, currentBest, methodToImplement.getReturnType().getName());
+						}
+						
 					}
 				} else {
 					throw new RuntimeException("no test results - unexpected");
 				}
+				
+				if (minimising) {
+					minimisingCycles++;
+				}
+				
 			}
 		} else {
 			System.out.println("something is null");
