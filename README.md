@@ -20,7 +20,7 @@ Write an interface with a method you want to implement (method parameters should
 Write unit tests for the method (Unit test classes need to implement SpecUnitTest). Example implementation below (where toGenInstance is the instance the unit test will test against).
 
 ```
-public class ToGenTestD implements SpecUnitTest {
+public class ToGenTestE implements SpecUnitTest {
 
 	private static Object staticTestObjectInstance;
 	
@@ -40,27 +40,26 @@ public class ToGenTestD implements SpecUnitTest {
 	}
 	
 	@Test
-	public void testAddThenMultiA() {
-		//System.out.println("in test addThenMultiA D");
-		int result = toGenInstance.addThenMulti(1, 2, 3, 4);
-		assertEquals(21, result);
+	public void testAddToMaxA() {
+		int result = toGenInstance.addToMax(1, 2, 4);
+		assertEquals(3, result);
 	}
 ```
 
 Write a utility class to call the generator (example below) and run it.
 
 ```
-	private static void generateAddThenMulti() {
+	private static void generateAddToMax() {
 		Class interfaceToImpl = ToGen.class;
 		Method methodToImpl = null;
 		try {
-			methodToImpl = interfaceToImpl.getMethod("addThenMulti", new Class[] {int.class, int.class, int.class, int.class});
+			methodToImpl = interfaceToImpl.getMethod("addToMax", new Class[] {int.class, int.class, int.class});
 		} catch (NoSuchMethodException nsme) {
 			System.out.println("caught a nsme");
 			nsme.printStackTrace();
 		}
 		
-		SpecUnitTest testA = new au.com.egaiuser.tests.ToGenTestD();
+		SpecUnitTest testA = new au.com.egaiuser.tests.ToGenTestE();
 		
 		Generator.generate(interfaceToImpl, methodToImpl, testA);
 	}
