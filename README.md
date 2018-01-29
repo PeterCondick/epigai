@@ -67,21 +67,49 @@ Write a utility class to call the generator (example below) and run it.
 ```
 
 When the generator has found a solution copy and paste the printed out code into your implementation of the interface
+(example tests method should return arg0 + arg1 unless the sum is greater than arg2, in which case return arg2)
 
 ```
 ####### Found a solution #########
-int var1 = arg3 + arg2;
-int var2 = var1 * arg0;
-int var3 = arg0;
-int var4 = arg0 + arg1;
-int var5 = var1 * var4;
-return var5;
-called the generator
+    int var1 = arg0 + arg1;
+    int var2 = arg2 * arg0;
+    if (var1 > arg2) {
+        var1 = var2 / arg0;      // note in this case it's generated a strange way to set var1 = arg2 (var1 = (arg2 * arg0)/arg0)
+        int var3 = arg1 + arg2;
+    }
+    return var1;
 ```
+
+you can then optionally run further in a line-minimisation mode
+
+```
+Do you want to try to minimise the lines for another 1000 cycles - y or n?
+y
+```
+
+until you've had enough
+
+```
+Do you want to try to minimise the lines for another 1000 cycles - y or n?
+n
+###### Stopping. The best solution found was #####
+    int var1 = arg0 + arg1;
+    if (var1 > arg2) {
+        var1 = arg2;        // much simpler way to set var1 = arg2 this time
+        int var2 = 0;       // could get it to drop this line too if I continued running it
+    }
+    return var1;
+EpigaiRunner called the generator
+```
+
 
 You're done. No need to write the implementation yourself.
 
-Note - currently epigai is quite limited in functionality. Only int parameters are catered for, and a limited range of operations are available.
+
+
+
+
+Note - currently epigai is quite limited in functionality. Only int parameters and if statements are catered for, with a limited range of int manipulation operations available.
 
 See the project [https://github.com/PeterCondick/egaiuser](https://github.com/PeterCondick/egaiuser) for an example project that uses this project to evolve code.
 

@@ -19,7 +19,7 @@ import au.com.epigai.generator.functions.AbstractStatement;
 
 public class Generator {
 	
-	private static final int DEFAULT_MINIMISE_PER_CYCLE = 100;
+	private static final int DEFAULT_MINIMISE_PER_CYCLE = 1000;
 	
 	public static void generate(Class interfaceToImplement, Method methodToImplement, SpecUnitTest... unitTestInstances) {	
 		
