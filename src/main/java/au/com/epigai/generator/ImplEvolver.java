@@ -16,6 +16,7 @@ import au.com.epigai.generator.functions.conditions.AbstractBooleanCondition;
 import au.com.epigai.generator.functions.conditions.BooleanConditionIntEquals;
 import au.com.epigai.generator.functions.conditions.BooleanConditionIntGreaterThan;
 import au.com.epigai.generator.functions.conditions.BooleanConditionTrue;
+import au.com.epigai.generator.functions.flowimpls.FlowControlElse;
 import au.com.epigai.generator.functions.flowimpls.FlowControlIf;
 import au.com.epigai.generator.functions.flowimpls.FlowControlReturn;
 import au.com.epigai.generator.functions.intimpls.IntFunctionDivideImpl;
@@ -229,6 +230,20 @@ public class ImplEvolver {
 					//ifBlock.setParentBlock(thisBlock);
 					fcIf.setCodeBlock(ifBlock);
 					
+					// does it have an else statement?
+					if (includeAnElse()) {
+						System.out.println("am having an else for this if");
+						FlowControlElse fcElse = new FlowControlElse();
+						
+						// add the codeBlock
+						CodeBlock elseBlock = initialNestedBlock(thisBlock);
+						fcElse.setCodeBlock(elseBlock);
+						
+						fcIf.setFlowControlElse(fcElse);
+					} else {
+						System.out.println("not having an else for this if");
+					}
+					
 					addTo.add(fcIf);
 				} catch (Exception e) {
 					// TODO - handle this more nicely
@@ -239,6 +254,15 @@ public class ImplEvolver {
 			}
 		}
 		return addTo;
+	}
+	
+	private static boolean includeAnElse() {
+		// returns 1 or 2
+		int num = 1 + random.nextInt(2);
+		if (num == 1) {
+			return true;
+		}
+		return false;
 	}
 	
 	private static void addAnIntFunction(List<AbstractStatement> addTo) {

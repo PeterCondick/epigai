@@ -14,6 +14,8 @@ public class FlowControlIf extends AbstractStatement implements FlowControl {
 	
 	private AbstractBooleanCondition booleanCondition;
 
+	private FlowControlElse flowControlElse;
+	
 	@Override
 	public void printCode() {
 		System.out.print(getIndent());
@@ -22,7 +24,12 @@ public class FlowControlIf extends AbstractStatement implements FlowControl {
 		System.out.println(") {");
 		codeBlock.printCode();
 		System.out.print(getIndent());
-		System.out.println("}");
+		if (flowControlElse != null) {
+			System.out.print("}");
+			flowControlElse.printCode();
+		} else {
+			System.out.println("}");
+		}
 	}
 
 	public void execute(Object first, Object second) {
@@ -31,6 +38,14 @@ public class FlowControlIf extends AbstractStatement implements FlowControl {
 			if (codeBlockRet.isPresent()) {
 				// TODO if we want anything other than the top level code block returning stuff will need to implement this properly
 				throw new RuntimeException("Cant cope with code blocks returning stuff at the moment");
+			}
+		} else {
+			if (flowControlElse != null) {
+				Optional<Optional<Object>> codeBlockRet = flowControlElse.getCodeBlock().execute();
+				if (codeBlockRet.isPresent()) {
+					// TODO if we want anything other than the top level code block returning stuff will need to implement this properly
+					throw new RuntimeException("Cant cope with code blocks returning stuff at the moment");
+				}
 			}
 		}
 	}
@@ -49,6 +64,14 @@ public class FlowControlIf extends AbstractStatement implements FlowControl {
 
 	public void setCodeBlock(CodeBlock codeBlock) {
 		this.codeBlock = codeBlock;
+	}
+
+	public FlowControlElse getFlowControlElse() {
+		return flowControlElse;
+	}
+
+	public void setFlowControlElse(FlowControlElse flowControlElse) {
+		this.flowControlElse = flowControlElse;
 	}
 
 	@Override
